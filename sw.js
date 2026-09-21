@@ -1,12 +1,12 @@
-// sw.js - Service Worker script for receiving push events
+// sw.js - Background Service Worker for handling Push Notifications
 
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'Pixel Friends';
   const options = {
-    body: data.body || 'You received a new message!',
-    icon: '/icon.png', // Optional: Path to icon
-    badge: '/badge.png', // Optional: Path to badge
+    body: data.body || 'You received a new notification!',
+    icon: '/icon.png',
+    badge: '/badge.png',
     data: { url: data.url || '/' },
   };
 

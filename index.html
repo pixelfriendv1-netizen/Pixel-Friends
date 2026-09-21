@@ -437,8 +437,8 @@ function subscribeToPosts() {
             user_id: user.id,
             type: 'post',
             target_id: payload.new.id,
-            title: 'New Feed Activity',
-            message: `${payload.new.user_name || 'A friend'} shared a new post.`,
+            title: `Post from ${payload.new.user_name || 'A friend'}`,
+            message: payload.new.text ? (payload.new.text.length > 35 ? payload.new.text.slice(0, 35) + '...' : payload.new.text) : 'Shared a new media post.',
             is_read: false
           }]);
         }
@@ -651,13 +651,13 @@ async function handleMessageSubmit(event) {
   if (error) {
     alert("Failed to send message: " + error.message);
   } else {
-    // Also trigger notification for the recipient
+    // Dynamic notification showing the sender's name and actual message preview
     await sb.from('notifications').insert([{
       user_id: activeRecipient,
       type: 'message',
       target_id: user.id,
-      title: 'New Message',
-      message: `${displayName()} sent you a direct message.`,
+      title: `Message from ${displayName()}`,
+      message: content.length > 35 ? content.slice(0, 35) + '...' : content,
       is_read: false
     }]);
 

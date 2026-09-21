@@ -39,6 +39,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
 .brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
 
+/* Separate Bell & Profile Button Styles */
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
 .bell-btn:hover { border-color: var(--cyan); }
@@ -161,9 +162,12 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   <div class="spacer"></div>
   
   <div class="header-actions">
+    <!-- Notification Bell Button with Badge Support -->
     <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications">
       <span style="font-size: 16px;">🔔</span>
     </button>
+
+    <!-- Profile Button -->
     <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
       <span class="profile-avatar" id="topAvatar">PF</span>
       <span>Profile</span>
@@ -345,6 +349,7 @@ $("logout").onclick=async()=>{
   closeApp();
 };
 
+/* Button Click Handlers */
 $("topBell").onclick = () => {
   showPage("notifications");
   loadNotifications();
@@ -359,6 +364,7 @@ $("topProfile").onclick = () => {
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
 
+/* File & Clipboard Handling */
 function setMediaFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -405,7 +411,7 @@ $("postBtn").onclick = async () => {
   const text = $("postText").value.trim();
   if (!text && !currentMedia) return;
 
-  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null, likes_count: 0, likes_users: [], comments: [] };
+  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null, likes_count: 0, likes_users: [] };
   if (mode === "cloud" && sb) {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
@@ -460,10 +466,10 @@ function subscribeToPosts() {
 }
 
 async function handleLike(postId) {
-  const post = posts.find(p => String(p.id) === String(postId));
+  const post = posts.find(p => p.id === postId);
   if (!post) return;
   
-  let likesUsers = Array.isArray(post.likes_users) ? [...post.likes_users] : [];
+  let likesUsers = post.likes_users || [];
   let likesCount = post.likes_count || 0;
   const hasLiked = likesUsers.includes(user.id);
 
@@ -476,15 +482,7 @@ async function handleLike(postId) {
   }
 
   if (mode === "cloud" && sb) {
-    const { error } = await sb.from('posts').update({ likes_count: likesCount, likes_users: likesUsers }).eq('id', postId);
-    if (error) {
-      console.error("Like update error:", error.message);
-      return;
-    }
-    post.likes_count = likesCount;
-    post.likes_users = likesUsers;
-    renderFeed();
-
+    await sb.from('posts').update({ likes_count: likesCount, likes_users: likesUsers }).eq('id', postId);
     if (!hasLiked && post.user_id !== user.id) {
       await sb.from('notifications').insert([{
         user_id: post.user_id,
@@ -505,27 +503,16 @@ async function handleLike(postId) {
 async function handleAddComment(postId, event) {
   event.preventDefault();
   const input = $(`comment-input-${postId}`);
-  if (!input) return;
   const text = input.value.trim();
   if (!text) return;
 
-  const post = posts.find(p => String(p.id) === String(postId));
-  if (!post) return;
-
+  const post = posts.find(p => p.id === postId);
   const newComment = { user_name: displayName(), text, created_at: new Date().toISOString() };
-  let comments = Array.isArray(post.comments) ? [...post.comments] : [];
+  let comments = post.comments || [];
   comments.push(newComment);
 
   if (mode === "cloud" && sb) {
-    const { error } = await sb.from('posts').update({ comments }).eq('id', postId);
-    if (error) {
-      console.error("Comment update error:", error.message);
-      alert("Failed to post comment: " + error.message);
-      return;
-    }
-    post.comments = comments;
-    renderFeed();
-
+    await sb.from('posts').update({ comments }).eq('id', postId);
     if (post.user_id !== user.id) {
       await sb.from('notifications').insert([{
         user_id: post.user_id,
@@ -547,21 +534,14 @@ function renderFeed(){
  f.innerHTML=posts.map(p=>{
    const name = p.user_name || p.name || 'Pixel Friend';
    let mediaHtml = '';
-   
-   // Robust media handling for images, videos, and audio files
    if(p.media){
-     const mediaObj = typeof p.media === 'string' ? JSON.parse(p.media) : p.media;
-     if(mediaObj.type === 'image' || mediaObj.src?.startsWith('data:image/')) {
-       mediaHtml = `<div class="post-media"><img src="${mediaObj.src}"></div>`;
-     } else if(mediaObj.type === 'video' || mediaObj.src?.startsWith('data:video/')) {
-       mediaHtml = `<div class="post-media"><video src="${mediaObj.src}" controls></video></div>`;
-     } else if(mediaObj.type === 'audio' || mediaObj.src?.startsWith('data:audio/')) {
-       mediaHtml = `<div class="post-media"><audio src="${mediaObj.src}" controls></audio></div>`;
-     }
+     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
+     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
+     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
    }
 
-   const isLiked = Array.isArray(p.likes_users) && p.likes_users.includes(user?.id);
-   const comments = Array.isArray(p.comments) ? p.comments : [];
+   const isLiked = p.likes_users && p.likes_users.includes(user?.id);
+   const comments = p.comments || [];
 
    return `<article class="post" data-post-id="${p.id || ''}">
      <div class="post-head">
@@ -571,7 +551,7 @@ function renderFeed(){
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}
      <div class="post-actions">
-       <button type="button" class="post-action-btn ${isLiked ? 'liked' : ''}" onclick="handleLike('${p.id}')">
+       <button class="post-action-btn ${isLiked ? 'liked' : ''}" onclick="handleLike('${p.id}')">
          ❤️ <span>${p.likes_count || 0}</span> Likes
        </button>
      </div>
@@ -589,6 +569,7 @@ function renderFeed(){
  }).join("");
 }
 
+/* --- Notifications & Unread Badge Counter Logic --- */
 async function loadNotificationsCount() {
   if (mode !== "cloud" || !sb || !user) return;
   const { count, error } = await sb
@@ -703,6 +684,7 @@ function subscribeToNotifications() {
   }
 }
 
+/* --- Direct Messaging Logic --- */
 async function loadChatUsers() {
   const usersListElem = $("chatUsersList");
   if (mode !== "cloud" || !sb) {

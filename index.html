@@ -464,7 +464,8 @@ async function handleLike(postId) {
       await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
     } else {
       await sb.from('likes').insert([{ post_id: postId, user_id: user.id }]);
-      if (post.user_id !== user.id) {
+      // Note: If testing with your own account on your own post, remove "post.user_id !== user.id" if you want to receive notifications yourself!
+      if (true) { 
         await sb.from('notifications').insert([{
           user_id: post.user_id,
           type: 'post',
@@ -509,7 +510,7 @@ async function handleAddComment(postId, event) {
       return;
     }
 
-    if (post && post.user_id !== user.id) {
+    if (post) {
       await sb.from('notifications').insert([{
         user_id: post.user_id,
         type: 'post',
@@ -673,13 +674,14 @@ function updateNotificationBadge(count) {
 function subscribeToNotifications() {
   if (notificationSubscription) sb.removeChannel(notificationSubscription);
   if (mode === "cloud" && sb && user) {
-    notificationSubscription = sb.channel('public:notifications')
+    notificationSubscription = sb.channel('public:notifications_' + user.id)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
         table: 'notifications', 
         filter: `user_id=eq.${user.id}` 
-      }, () => {
+      }, (payload) => {
+        console.log("New notification received:", payload);
         loadNotificationsCount();
       })
       .subscribe();

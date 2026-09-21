@@ -1,30 +1,22 @@
-// sw.js - Service Worker for Background Notifications
-self.addEventListener('push', function(event) {
-  let data = { title: 'Pixel Friends Alert', body: 'You have a new notification!' };
-  if (event.data) {
-    try { data = event.data.json(); } catch(e) { data.body = event.data.text(); }
-  }
-
+// public/sw.js
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Pixel Friends Alert';
   const options = {
-    body: data.body,
-    icon: '/icon.png', // Optional icon path
+    body: data.body || 'You received a new message!',
+    icon: '/icon.png',
     badge: '/badge.png',
-    vibrate: [100, 50, 100]
+    data: { url: data.url || '/' }
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(title, options)
   );
 });
 
-self.addEventListener('notificationclick', function(event) {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      if (clientList.length > 0) {
-        return clientList[0].focus();
-      }
-      return clients.openWindow('/');
-    })
+    clients.openWindow(event.notification.data.url)
   );
 });

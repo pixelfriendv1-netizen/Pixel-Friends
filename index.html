@@ -285,7 +285,10 @@ function openApp(){
  $("welcome").textContent=`Welcome, ${displayName()}.`;
  $("profileName").textContent=displayName();$("profileEmail").textContent=user?.email||"Demo account";
  $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();$("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
- renderFeed();showPage("home");
+ 
+ loadPosts();
+ subscribeToPosts();
+ showPage("home");
  checkPushSubscription();
 }
 
@@ -391,28 +394,69 @@ $("mediaInput").onchange = (e) => {
   }
 };
 
-/* Create Post */
-$("postBtn").onclick=()=>{
- const text=$("postText").value.trim();
- if(!text && !currentMedia) return;
- 
- posts.unshift({
-   id: Date.now(),
-   name: displayName(),
-   text: text,
-   media: currentMedia ? { ...currentMedia } : null,
-   created: new Date()
- });
- 
- $("postText").value = "";
- currentMedia = null;
- renderMediaPreview();
- renderFeed();
+/* Create Post - Saves to Supabase to trigger Edge Function Webhook */
+$("postBtn").onclick = async () => {
+  const text = $("postText").value.trim();
+  if (!text && !currentMedia) return;
+
+  const newPost = {
+    user_id: user?.id,
+    user_name: displayName(),
+    text: text || null,
+    media: currentMedia ? { ...currentMedia } : null
+  };
+
+  if (mode === "cloud" && sb) {
+    const { error } = await sb.from('posts').insert([newPost]);
+    if (error) {
+      alert("Failed to create post: " + error.message);
+      return;
+    }
+  } else {
+    // Demo Mode fallback
+    posts.unshift({ ...newPost, created_at: new Date().toISOString() });
+    renderFeed();
+  }
+
+  $("postText").value = "";
+  currentMedia = null;
+  renderMediaPreview();
 };
+
+/* Load Posts from Supabase */
+async function loadPosts() {
+  if (mode === "cloud" && sb) {
+    const { data, error } = await sb
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      posts = data;
+      renderFeed();
+    }
+  } else {
+    renderFeed();
+  }
+}
+
+/* Real-time listener for incoming posts */
+function subscribeToPosts() {
+  if (mode === "cloud" && sb) {
+    sb.channel('public:posts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+        posts.unshift(payload.new);
+        renderFeed();
+      })
+      .subscribe();
+  }
+}
 
 function renderFeed(){
  const f=$("feed");if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
  f.innerHTML=posts.map(p=>{
+   const name = p.user_name || p.name || 'Pixel Friend';
    let mediaHtml = '';
    if(p.media){
      if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
@@ -421,8 +465,8 @@ function renderFeed(){
    }
    return `<article class="post">
      <div class="post-head">
-       <div class="avatar">${esc(p.name.slice(0,2).toUpperCase())}</div>
-       <div><b>${esc(p.name)}</b><div class="muted">Just now</div></div>
+       <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
+       <div><b>${esc(name)}</b><div class="muted">Just now</div></div>
      </div>
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}

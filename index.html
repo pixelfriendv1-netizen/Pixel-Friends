@@ -411,12 +411,12 @@ $("postBtn").onclick = async () => {
   const text = $("postText").value.trim();
   if (!text && !currentMedia) return;
 
-  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null, likes_count: 0, likes_users: [] };
+  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null };
   if (mode === "cloud" && sb) {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
   } else {
-    posts.unshift({ ...newPost, id: 'local-' + Date.now(), created_at: new Date().toISOString() });
+    posts.unshift({ ...newPost, id: 'local-' + Date.now(), created_at: new Date().toISOString(), likes: [], comments: [] });
     renderFeed();
   }
   $("postText").value = "";
@@ -426,8 +426,16 @@ $("postBtn").onclick = async () => {
 
 async function loadPosts() {
   if (mode === "cloud" && sb) {
-    const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
-    if (!error && data) { posts = data; renderFeed(); }
+    const { data, error } = await sb.from('posts').select('*, likes(user_id), comments(*)').order('created_at', { ascending: false }).limit(20);
+    if (!error && data) { 
+      posts = data.map(p => ({
+        ...p,
+        likes_users: p.likes ? p.likes.map(l => l.user_id) : [],
+        likes_count: p.likes ? p.likes.length : 0,
+        comments: p.comments ? p.comments.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)) : []
+      }));
+      renderFeed(); 
+    }
   } else {
     renderFeed();
   }
@@ -436,31 +444,10 @@ async function loadPosts() {
 function subscribeToPosts() {
   if (postsSubscription) sb.removeChannel(postsSubscription);
   if (mode === "cloud" && sb) {
-    postsSubscription = sb.channel('public:posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
-        if (!posts.some(p => p.id === payload.new.id)) {
-          posts.unshift(payload.new);
-          renderFeed();
-        }
-
-        if (payload.new.user_id !== user?.id) {
-          await sb.from('notifications').insert([{
-            user_id: user.id,
-            type: 'post',
-            target_id: payload.new.id,
-            title: `Post from ${payload.new.user_name || 'A friend'}`,
-            message: payload.new.text ? (payload.new.text.length > 35 ? payload.new.text.slice(0, 35) + '...' : payload.new.text) : 'Shared a new media post.',
-            is_read: false
-          }]);
-        }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
-        const idx = posts.findIndex(p => p.id === payload.new.id);
-        if (idx !== -1) {
-          posts[idx] = payload.new;
-          renderFeed();
-        }
-      })
+    postsSubscription = sb.channel('public:feed_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => loadPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => loadPosts())
       .subscribe();
   }
 }
@@ -470,32 +457,33 @@ async function handleLike(postId) {
   if (!post) return;
   
   let likesUsers = post.likes_users || [];
-  let likesCount = post.likes_count || 0;
   const hasLiked = likesUsers.includes(user.id);
 
-  if (hasLiked) {
-    likesUsers = likesUsers.filter(id => id !== user.id);
-    likesCount = Math.max(0, likesCount - 1);
-  } else {
-    likesUsers.push(user.id);
-    likesCount += 1;
-  }
-
   if (mode === "cloud" && sb) {
-    await sb.from('posts').update({ likes_count: likesCount, likes_users: likesUsers }).eq('id', postId);
-    if (!hasLiked && post.user_id !== user.id) {
-      await sb.from('notifications').insert([{
-        user_id: post.user_id,
-        type: 'post',
-        target_id: postId,
-        title: `New Reaction ❤️`,
-        message: `${displayName()} liked your post.`,
-        is_read: false
-      }]);
+    if (hasLiked) {
+      await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
+    } else {
+      await sb.from('likes').insert([{ post_id: postId, user_id: user.id }]);
+      if (post.user_id !== user.id) {
+        await sb.from('notifications').insert([{
+          user_id: post.user_id,
+          type: 'post',
+          target_id: postId,
+          title: `New Reaction ❤️`,
+          message: `${displayName()} liked your post.`,
+          is_read: false
+        }]);
+      }
     }
+    loadPosts();
   } else {
-    post.likes_count = likesCount;
-    post.likes_users = likesUsers;
+    if (hasLiked) {
+      post.likes_users = likesUsers.filter(id => id !== user.id);
+      post.likes_count = Math.max(0, (post.likes_count || 1) - 1);
+    } else {
+      post.likes_users.push(user.id);
+      post.likes_count = (post.likes_count || 0) + 1;
+    }
     renderFeed();
   }
 }
@@ -507,13 +495,21 @@ async function handleAddComment(postId, event) {
   if (!text) return;
 
   const post = posts.find(p => p.id === postId);
-  const newComment = { user_name: displayName(), text, created_at: new Date().toISOString() };
-  let comments = post.comments || [];
-  comments.push(newComment);
 
   if (mode === "cloud" && sb) {
-    await sb.from('posts').update({ comments }).eq('id', postId);
-    if (post.user_id !== user.id) {
+    const { error } = await sb.from('comments').insert([{
+      post_id: postId,
+      user_id: user.id,
+      user_name: displayName(),
+      text: text
+    }]);
+
+    if (error) {
+      alert("Failed to post comment: " + error.message);
+      return;
+    }
+
+    if (post && post.user_id !== user.id) {
       await sb.from('notifications').insert([{
         user_id: post.user_id,
         type: 'post',
@@ -523,8 +519,14 @@ async function handleAddComment(postId, event) {
         is_read: false
       }]);
     }
+
+    input.value = '';
+    loadPosts();
   } else {
-    post.comments = comments;
+    const newComment = { user_name: displayName(), text, created_at: new Date().toISOString() };
+    if (!post.comments) post.comments = [];
+    post.comments.push(newComment);
+    input.value = '';
     renderFeed();
   }
 }
@@ -677,7 +679,7 @@ function subscribeToNotifications() {
         schema: 'public', 
         table: 'notifications', 
         filter: `user_id=eq.${user.id}` 
-      }, (payload) => {
+      }, () => {
         loadNotificationsCount();
       })
       .subscribe();

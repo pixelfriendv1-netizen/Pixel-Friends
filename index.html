@@ -1,242 +1,809 @@
-<!DOCTYPE html>
+
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Friends</title>
-    <!-- Load Supabase v2 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .hidden { display: none !important; }
-        input, textarea, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { background: #1877f2; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:hover { background: #166fe5; }
-        .post-card { background: #fff; border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 6px; }
-        .post-header { font-weight: bold; margin-bottom: 5px; color: #555; font-size: 0.9em; }
-        .actions { display: flex; gap: 10px; margin-top: 10px; }
-        .actions button { background: #e4e6eb; color: #333; width: auto; padding: 6px 12px; font-size: 0.85em; }
-        .comments-section { margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; font-size: 0.9em; }
-        .comment-item { background: #f0f2f5; padding: 6px 10px; border-radius: 4px; margin-top: 5px; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pixel Friends — Cyber Community</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#03060b;--panel:#071019;--panel2:#0b1520;--line:#183142;--cyan:#39e7ff;--blue:#5c7cff;--pink:#ff4fd8;--text:#eaf7ff;--muted:#7691a5;--good:#49f0a0;--danger:#ff587c;--shadow:0 0 35px #0008}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#09253a55,transparent 35%),linear-gradient(135deg,#02050a,#06101a 55%,#03070d);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif;min-height:100vh}
+button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+#auth{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-box{width:min(460px,100%);background:#061019ee;border:1px solid #1b4357;border-radius:18px;padding:30px;box-shadow:0 0 70px #00d9ff18}
+.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px;position:relative}
+.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
+.nav-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border-radius:50%;padding:2px 6px;font-size:10px;font-weight:bold;z-index:10;box-shadow:0 0 10px var(--danger);cursor:pointer}
+.field{margin:12px 0}.field label{display:block;color:#9eb7c8;font-size:12px;margin-bottom:6px}.field input,.composer textarea,.search{width:100%;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:9px;padding:12px;outline:none}.field input:focus,.composer textarea:focus,.search:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #39e7ff15}
+.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}
+#app{display:none;min-height:100vh}
+
+.shell{display:block;min-height:100vh}
+.side{border-right:1px solid var(--line);background:#040a10f8;padding:22px 14px;position:fixed;top:0;left:0;bottom:0;width:270px;z-index:30;display:flex;flex-direction:column;justify-content:space-between;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:5px 0 35px rgba(0,0,0,0.8)}
+.side.open{transform:translateX(0)}
+.side .logo{font-size:20px;padding:0 10px 25px;cursor:pointer}
+.nav{display:grid;gap:7px}
+.nav button{text-align:left;border-color:transparent}
+.nav button.active{border-color:#21485b}
+.side-bottom{padding-top:18px;border-top:1px solid var(--line)}
+.profile-mini{padding:12px;border:1px solid var(--line);border-radius:10px;background:#08131d;margin-bottom:8px}
+.profile-mini b{display:block}
+
+.main{min-width:0}
+.top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 22px;background:#050b11dd;position:sticky;top:0;z-index:5}
+.top .search{max-width:420px}
+.spacer{flex:1}
+.menu-btn{width:42px;height:42px;border:1px solid #1d526d;border-radius:9px;background:#071521;color:var(--cyan);font-size:22px;display:grid;place-items:center}
+.brand-mini{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+.brand-icon{width:38px;height:38px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);box-shadow:0 0 16px #39e7ff33;font-size:17px}
+.brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
+.brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
+
+/* Header Action Styles */
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
+.bell-btn:hover { border-color: var(--cyan); }
+.profile-btn{display:flex;align-items:center;gap:8px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
+.profile-btn:hover{border-color:var(--cyan)}
+.profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:900}
+
+.page{display:none;padding:26px;max-width:1300px;margin:auto}
+.page.active{display:block}
+.hero{border:1px solid #1d4b60;border-radius:18px;padding:28px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22);position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-80px;top:-80px;width:240px;height:240px;border:1px solid #39e7ff44;border-radius:50%;box-shadow:0 0 50px #39e7ff16}
+.hero h1{font-size:clamp(28px,4vw,48px);margin:8px 0}
+.hero p{color:#8ea9b9;max-width:650px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
+.card{background:#07111aee;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 14px}
+.composer textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.feed{display:grid;gap:12px;margin-top:12px}
+.post{border:1px solid #173344;border-radius:12px;padding:15px;background:#08131c;transition:border-color 0.3s}
+.post-head{display:flex;gap:10px;align-items:center}
+.avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900}
+.muted{color:var(--muted)}
+.post-body{padding:12px 0}
+.media-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.preview-item{position:relative;max-width:200px}
+.preview-item img,.preview-item video{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center}
+.post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
+.post-media audio{width:100%;margin-top:10px}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
+.list{display:grid;gap:9px}
+.page-title{font-size:28px;margin:0 0 5px}
+.page-sub{color:var(--muted);margin:0 0 20px}
+.mobile-nav{display:none}
+
+/* Post Actions & Comments UI Styles */
+.post-actions{display:flex;gap:15px;margin-top:12px;padding-top:10px;border-top:1px solid #173344}
+.action-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;transition:background 0.2s, color 0.2s}
+.action-btn:hover{background:#0b1d28;color:var(--cyan)}
+.action-btn.liked{color:var(--pink)}
+.comments-section{margin-top:12px;padding-top:10px;border-top:1px dashed #173344;display:none}
+.comments-section.open{display:block}
+.comment-item{font-size:12px;background:#03080d;border:1px solid #153040;padding:8px 10px;border-radius:6px;margin-bottom:6px}
+.comment-item b{color:var(--cyan)}
+.comment-form{display:flex;gap:6px;margin-top:8px}
+.comment-form input{flex:1;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:6px;padding:8px;font-size:12px;outline:none}
+.comment-form input:focus{border-color:var(--cyan)}
+
+.chat-container{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:450px}
+.chat-users{border-right:1px solid var(--line);padding-right:14px;overflow-y:auto;max-height:500px}
+.chat-user-item{padding:10px;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#08131c;border:1px solid #153040}
+.chat-user-item:hover,.chat-user-item.active{background:#0b1c2b;border-color:var(--cyan)}
+.chat-box{display:flex;flex-direction:column;height:500px}
+.chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;background:#03080d;border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+.chat-msg{max-width:70%;padding:10px;border-radius:8px;font-size:13px}
+.chat-msg.sent{background:#0b2530;border:1px solid #174a5c;align-self:flex-end;color:var(--cyan)}
+.chat-msg.received{background:#0b1520;border:1px solid var(--line);align-self:flex-start}
+
+.notification-item{padding: 14px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background 0.2s; border-radius: 6px;}
+.notification-item:hover{background: #081522;}
+
+@media(max-width:850px){
+  .chat-container{grid-template-columns:1fr}
+  .chat-users{max-height:150px;border-right:none;border-bottom:1px solid var(--line);padding-bottom:10px}
+}
+
+.drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
+.drawer-backdrop.active{display:block}
+
+@media(max-width:850px){
+  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:20;background:#050b11f5;border-top:1px solid var(--line);padding:7px;gap:5px;overflow:auto}
+  .mobile-nav button{flex:1;min-width:72px}
+  .top{padding:10px 14px}
+  .top .search{display:none}
+  .page{padding:16px 14px 82px}
+  .grid{grid-template-columns:1fr}
+  .hero{padding:22px}
+}
+</style>
 </head>
 <body>
+<section id="auth">
+  <div class="auth-box">
+    <div class="logo">PIXEL FRIENDS</div>
+    <div class="sub">A fresh cyber community — your space, your people.</div>
+    <div class="tabs"><button id="loginTab" class="active">LOGIN</button><button id="registerTab">REGISTER</button></div>
+    <form id="authForm">
+      <div class="field"><label>EMAIL</label><input id="email" type="email" required autocomplete="email"></div>
+      <div class="field"><label>PASSWORD</label><input id="password" type="password" required minlength="6" autocomplete="current-password"></div>
+      <div class="field hidden" id="nameField"><label>DISPLAY NAME</label><input id="displayName" maxlength="30"></div>
+      <button class="primary" id="authSubmit">ENTER PIXEL FRIENDS</button>
+    </form>
+    <div class="status" id="authStatus"></div>
+    <button class="secondary" id="demoBtn" style="width:100%;margin-top:12px">CONTINUE IN DEMO MODE</button>
+  </div>
+</section>
 
-<div class="container">
-    <h2>Pixel Friends 🐾</h2>
-
-    <!-- AUTH SECTION -->
-    <div id="auth-section">
-        <h3>Login / Sign Up</h3>
-        <input type="email" id="email" placeholder="Email address">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="handleSignUp()">Sign Up</button>
-        <button onclick="handleLogin()">Log In</button>
-        <p id="auth-error" style="color: red;"></p>
+<div id="app">
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="shell">
+<aside class="side" id="sideDrawer">
+  <div>
+    <div class="logo" id="sideLogo">PIXEL FRIENDS</div>
+    <nav class="nav" id="sideNav"></nav>
+  </div>
+  <div class="side-bottom">
+    <div class="profile-mini">
+      <span class="muted">SIGNED IN AS</span>
+      <b id="sideName">Guest</b>
     </div>
+    <button class="secondary" id="logout" style="width:100%">LOG OUT</button>
+  </div>
+</aside>
 
-    <!-- APP SECTION -->
-    <div id="app-section" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <p id="user-display" style="font-weight: bold;"></p>
-            <button onclick="handleLogout()" style="width: auto; background: #e4e6eb; color: #333;">Log Out</button>
+<main class="main">
+<header class="top">
+  <button class="menu-btn" id="menuBtn" aria-label="Toggle Menu">☰</button>
+  <div class="brand-mini" id="brandBtn" title="Click to Refresh Page">
+    <div class="brand-icon">◉</div>
+    <div>
+      <div class="brand-name">PIXEL FRIENDS</div>
+      <div class="brand-sub">CONNECT • CHAT • SHARE</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  
+  <div class="header-actions">
+    <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications">
+      <span style="font-size: 16px;">🔔</span>
+    </button>
+    <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
+      <span class="profile-avatar" id="topAvatar">PF</span>
+      <span>Profile</span>
+    </button>
+  </div>
+</header>
+
+<section class="page active" id="home">
+  <div class="hero">
+    <h1 id="welcome">Welcome, Pixel Friend.</h1>
+    <p>A clean, independent social space built for profiles, friends, posts, messages, and audio playlist.</p>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card composer">
+        <h3>Share something</h3>
+        <textarea id="postText" placeholder="📋 Paste text, 🖼️ screenshots, or copied pictures directly here (Ctrl+V) and video and audio"></textarea>
+        
+        <input type="file" id="mediaInput" accept="image/*,video/*,audio/*" class="hidden">
+        
+        <div id="mediaPreview" class="media-preview"></div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" id="uploadImgBtn" style="font-size:12px">🖼️ Image</button>
+          <button class="secondary" id="uploadVidBtn" style="font-size:12px">🎥 Video</button>
+          <button class="secondary" id="uploadAudBtn" style="font-size:12px">🎵 Audio</button>
+          <div class="spacer"></div>
+          <button class="primary" style="width:auto" id="postBtn">POST</button>
         </div>
-
-        <hr>
-
-        <h3>Create Post</h3>
-        <textarea id="post-content" placeholder="What's on your mind?"></textarea>
-        <button onclick="createPost()">Publish Post</button>
-
-        <h3>Feed</h3>
-        <div id="feed-container"></div>
+      </div>
+      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div></div></div>
     </div>
+    <div>
+      <div class="card"><h3>Online friends</h3><div class="list"><div class="empty">No friends online yet.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="friends"><h2 class="page-title">Friends</h2><p class="page-sub">Build your own network.</p><div class="card"><div class="empty">You don't have any friends yet. Explore the community to start connecting.</div></div></section>
+
+<section class="page" id="messages">
+  <h2 class="page-title">Messages</h2>
+  <p class="page-sub">Direct conversations with community members.</p>
+  <div class="card">
+    <div class="chat-container">
+      <div class="chat-users" id="chatUsersList">
+        <div class="empty" style="padding:15px;font-size:12px;">Loading users...</div>
+      </div>
+      <div class="chat-box">
+        <div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div>
+        <div class="chat-messages" id="chatMessagesList">
+          <div class="empty">No conversation selected.</div>
+        </div>
+        <form id="chatForm" onsubmit="handleMessageSubmit(event)" style="display:flex;gap:6px;" class="hidden">
+          <input type="text" id="chatInput" placeholder="Type a message..." required style="flex:1;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:6px;padding:10px;outline:none;" />
+          <button type="submit" class="secondary" style="padding: 10px 16px;">Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="notifications">
+  <h2 class="page-title">Notifications</h2>
+  <p class="page-sub">Mentions, reactions and new feed activity.</p>
+  <div class="card"><div class="empty">You're all caught up.</div></div>
+</section>
+
+<section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Your personal music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
+<section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Your Pixel Friends identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div><hr style="border-color:#142a38;margin:18px 0"><p class="muted">Your profile starts clean. Add your own bio, avatar and interests when profile editing is connected.</p></div></section>
+<section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Control your Pixel Friends experience.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Data source</span><b>Pixel Friends</b></div></div></section>
+</main></div>
+<nav class="mobile-nav" id="mobileNav"></nav>
 </div>
 
 <script>
-    // REPLACE THESE WITH YOUR ACTUAL SUPABASE CREDENTIALS
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
+const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
+
+let sb=null, mode="cloud", user=null, posts=[];
+let currentMedia = null;
+let activeRecipient = null;
+let chatSubscription = null;
+let notificationSubscription = null;
+let postRealtimeChannel = null;
+
+const navItems=[
+ ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
+ ["notifications","◉","Notifications"],["playlist","♫","Playlist"],
+ ["profile","◎","Profile"],["settings","⚙","Settings"]
+];
+
+function $(id){return document.getElementById(id)}
+function refreshApp(){window.location.reload()}
+
+$("brandBtn").onclick = refreshApp;
+if($("sideLogo")) $("sideLogo").onclick = refreshApp;
+
+function initSupabase(){
+  try{
+    if(window.supabase?.createClient) {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        realtime: { params: { eventsPerSecond: 10 } }
+      });
+    }
+  }catch(e){sb=null}
+}
+
+function buildNav(){
+  for(const host of [$("sideNav"),$("mobileNav")]){
+    if(!host) continue;
+    host.innerHTML=navItems.map(([id,icon,label])=>`<button data-page="${id}">${icon} &nbsp; ${label}</button>`).join("");
+    host.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      showPage(b.dataset.page);
+      if(b.dataset.page === 'messages') loadChatUsers();
+      if(b.dataset.page === 'notifications') {
+        loadNotifications();
+      }
+      closeMenu();
+    });
+  }
+}
+
+function toggleMenu(){
+  $("sideDrawer")?.classList.toggle("open");
+  $("drawerBackdrop")?.classList.toggle("active");
+}
+
+function closeMenu(){
+  $("sideDrawer")?.classList.remove("open");
+  $("drawerBackdrop")?.classList.remove("active");
+}
+
+function showPage(id){
+ document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));
+ document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+}
+
+function displayName(){
+ return user?.user_metadata?.display_name || user?.email?.split("@")[0] || localStorage.getItem("pf_demo_name") || "Pixel Friend";
+}
+
+function openApp(){
+ $("auth").classList.add("hidden");$("app").style.display="block";$("sideName").textContent=displayName();
+ $("welcome").textContent=`Welcome, ${displayName()}.`;
+ $("profileName").textContent=displayName();$("profileEmail").textContent=user?.email||"Demo account";
+ $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();$("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
+ 
+ loadPosts();
+ subscribeToPosts();
+ loadNotificationsCount(); 
+ subscribeToNotifications();
+ showPage("home");
+}
+
+function closeApp(){ $("app").style.display="none";$("auth").classList.remove("hidden"); }
+function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
+
+let register=false;
+$("loginTab").onclick=()=>{register=false;syncAuthMode()};
+$("registerTab").onclick=()=>{register=true;syncAuthMode()};
+
+function syncAuthMode(){$("loginTab").classList.toggle("active",!register);$("registerTab").classList.toggle("active",register);$("nameField").classList.toggle("hidden",!register);$("authSubmit").textContent=register?"CREATE PIXEL FRIENDS ACCOUNT":"ENTER PIXEL FRIENDS";$("authStatus").textContent=""}
+
+$("authForm").onsubmit=async e=>{
+ e.preventDefault();setStatus("Connecting…",false);
+ const email=$("email").value.trim(),password=$("password").value,display=$("displayName").value.trim();
+ if(!sb){setStatus("Cloud authentication is unavailable. Use Demo Mode.");return}
+ try{
+  if(register){
+   const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:display||email.split("@")[0]}}});
+   if(error)throw error;
+   if(data.session){user=data.user;openApp()}else setStatus("Account created. Check your email to confirm your account.",false);
+  }else{
+   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;user=data.user;mode="cloud";openApp();
+  }
+ }catch(err){setStatus(err?.message||"Authentication failed.")}
+};
+
+$("demoBtn").onclick=()=>{mode="demo";user={id:"demo-"+Date.now(),email:"demo@pixelfriends.local",user_metadata:{display_name:"Pixel Friend"}};localStorage.setItem("pf_demo_name","Pixel Friend");openApp()};
+
+$("logout").onclick=async()=>{
+  if(mode==="cloud"&&sb)try{await sb.auth.signOut()}catch(e){}
+  user=null;
+  closeMenu();
+  closeApp();
+};
+
+$("topBell").onclick = () => {
+  showPage("notifications");
+  loadNotifications();
+  closeMenu();
+};
+
+$("topProfile").onclick = () => {
+  showPage("profile");
+  closeMenu();
+};
+
+$("menuBtn").onclick=toggleMenu;
+$("drawerBackdrop").onclick=closeMenu;
+
+function setMediaFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let type = 'image';
+    if (file.type.startsWith('video/')) type = 'video';
+    else if (file.type.startsWith('audio/')) type = 'audio';
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    currentMedia = { type, src: e.target.result };
+    renderMediaPreview();
+  };
+  reader.readAsDataURL(file);
+}
 
-    let currentUser = null;
+function renderMediaPreview() {
+  const container = $("mediaPreview");
+  if (!currentMedia) {
+    container.innerHTML = "";
+    return;
+  }
+  let mediaHtml = "";
+  if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}">`;
+  else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
+  else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls></audio>`;
+  
+  container.innerHTML = `<div class="preview-item">${mediaHtml}<button class="remove-btn" onclick="removeMedia()">✕</button></div>`;
+}
 
-    async function init() {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            currentUser = session.user;
-            showApp();
-            loadPosts();
-            setupRealtime();
-        } else {
-            showAuth();
+function removeMedia() { currentMedia = null; renderMediaPreview(); }
+
+$("postText").addEventListener("paste", (e) => {
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (let item of items) {
+    if (item.kind === 'file') setMediaFile(item.getAsFile());
+  }
+});
+
+$("uploadImgBtn").onclick = () => { $("mediaInput").accept = "image/*"; $("mediaInput").click(); };
+$("uploadVidBtn").onclick = () => { $("mediaInput").accept = "video/*"; $("mediaInput").click(); };
+$("uploadAudBtn").onclick = () => { $("mediaInput").accept = "audio/*"; $("mediaInput").click(); };
+$("mediaInput").onchange = (e) => { if (e.target.files && e.target.files[0]) setMediaFile(e.target.files[0]); };
+
+$("postBtn").onclick = async () => {
+  const text = $("postText").value.trim();
+  if (!text && !currentMedia) return;
+
+  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null, likes: [], comments: [] };
+  if (mode === "cloud" && sb) {
+    const { error } = await sb.from('posts').insert([newPost]);
+    if (error) { alert("Failed to create post: " + error.message); return; }
+  } else {
+    posts.unshift({ ...newPost, id: 'local-' + Date.now(), created_at: new Date().toISOString() });
+    renderFeed();
+  }
+  $("postText").value = "";
+  currentMedia = null;
+  renderMediaPreview();
+};
+
+async function loadPosts() {
+  if (mode === "cloud" && sb) {
+    const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
+    if (!error && data) { posts = data; renderFeed(); }
+  } else {
+    renderFeed();
+  }
+}
+
+function subscribeToPosts() {
+  if (mode !== "cloud" || !sb) return;
+  
+  if (postRealtimeChannel) {
+    sb.removeChannel(postRealtimeChannel);
+  }
+
+  postRealtimeChannel = sb.channel('public:posts-realtime')
+    .on(
+      'postgres_changes', 
+      { event: '*', schema: 'public', table: 'posts' }, 
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (!posts.some(p => p.id === payload.new.id)) {
+            posts.unshift(payload.new);
+            renderFeed();
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const index = posts.findIndex(p => p.id === payload.new.id);
+          if (index > -1) {
+            posts[index] = payload.new;
+            renderFeed();
+          }
         }
-    }
+      }
+    )
+    .subscribe();
+}
 
-    async function handleSignUp() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) document.getElementById('auth-error').textContent = error.message;
-        else alert('Check your email for confirmation link or try logging in if email confirmation is disabled.');
-    }
+function renderFeed(){
+ const f=$("feed");if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
+ f.innerHTML=posts.map(p=>{
+   const name = p.user_name || p.name || 'Pixel Friend';
+   const likes = p.likes || [];
+   const likesCount = likes.length;
+   const isLiked = user && likes.includes(user.id);
+   const comments = p.comments || [];
 
-    async function handleLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-            document.getElementById('auth-error').textContent = error.message;
-        } else {
-            currentUser = data.user;
-            showApp();
-            loadPosts();
-            setupRealtime();
+   let mediaHtml = '';
+   if(p.media){
+     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
+     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
+     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
+   }
+
+   const commentsHtml = comments.map(c => `
+     <div class="comment-item">
+       <b>${esc(c.user_name)}</b>: ${esc(c.text)}
+     </div>
+   `).join('') || '<div class="empty" style="padding:8px;font-size:11px;">No comments yet.</div>';
+
+   return `<article class="post" data-post-id="${p.id || ''}">
+     <div class="post-head">
+       <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
+       <div><b>${esc(name)}</b><div class="muted">Just now</div></div>
+     </div>
+     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
+     ${mediaHtml}
+     
+     <div class="post-actions">
+       <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${p.id}')">
+         ❤️ <span>${likesCount}</span> Like${likesCount === 1 ? '' : 's'}
+       </button>
+       <button class="action-btn" onclick="toggleCommentSection('${p.id}')">
+         💬 <span>${comments.length}</span> Comment${comments.length === 1 ? '' : 's'}
+       </button>
+     </div>
+
+     <div class="comments-section" id="comments-${p.id}">
+       <div class="comments-list">${commentsHtml}</div>
+       <div class="comment-form">
+         <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." onkeydown="if(event.key==='Enter') addComment('${p.id}')">
+         <button class="secondary" style="padding:6px 12px;font-size:12px;" onclick="addComment('${p.id}')">Send</button>
+       </div>
+     </div>
+   </article>`;
+ }).join("");
+}
+
+async function toggleLike(postId) {
+  if (!user) return;
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+
+  if (!post.likes) post.likes = [];
+  const index = post.likes.indexOf(user.id);
+  
+  if (index > -1) {
+    post.likes.splice(index, 1);
+  } else {
+    post.likes.push(user.id);
+    if (mode === "cloud" && sb && post.user_id && post.user_id !== user.id) {
+      await sb.from('notifications').insert([{
+        user_id: post.user_id,
+        type: 'post',
+        target_id: postId,
+        title: `New Like`,
+        message: `${displayName()} liked your post.`,
+        is_read: false
+      }]);
+    }
+  }
+
+  if (mode === "cloud" && sb) {
+    await sb.from('posts').update({ likes: post.likes }).eq('id', postId);
+  }
+  renderFeed();
+}
+
+function toggleCommentSection(postId) {
+  const section = $(`comments-${postId}`);
+  if (section) section.classList.toggle('open');
+}
+
+async function addComment(postId) {
+  if (!user) return;
+  const input = $(`comment-input-${postId}`);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+
+  if (!post.comments) post.comments = [];
+  const newComment = { user_id: user.id, user_name: displayName(), text: text, created_at: new Date().toISOString() };
+  post.comments.push(newComment);
+
+  if (mode === "cloud" && sb) {
+    await sb.from('posts').update({ comments: post.comments }).eq('id', postId);
+    
+    if (post.user_id && post.user_id !== user.id) {
+      await sb.from('notifications').insert([{
+        user_id: post.user_id,
+        type: 'post',
+        target_id: postId,
+        title: `New Comment`,
+        message: `${displayName()} commented: "${text.length > 25 ? text.slice(0, 25) + '...' : text}"`,
+        is_read: false
+      }]);
+    }
+  }
+  input.value = '';
+  renderFeed();
+  $(`comments-${postId}`)?.classList.add('open');
+}
+
+async function loadNotificationsCount() {
+  if (mode !== "cloud" || !sb || !user) return;
+  const { count, error } = await sb
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('is_read', false);
+
+  if (!error) {
+    updateNotificationBadge(count || 0);
+  }
+}
+
+async function loadNotifications() {
+  const container = document.querySelector('#notifications .card');
+  if (!container) return;
+
+  if (mode !== "cloud" || !sb || !user) {
+    container.innerHTML = '<div class="empty">Notifications require cloud mode.</div>';
+    updateNotificationBadge(0);
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('notifications')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('id', { ascending: false });
+
+  if (error || !data || data.length === 0) {
+    container.innerHTML = '<div class="empty">You\'re all caught up on messages, mentions, reactions, and feed activity.</div>';
+    updateNotificationBadge(0);
+    return;
+  }
+
+  updateNotificationBadge(0);
+  await sb.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+
+  container.innerHTML = data.map(n => `
+    <div class="notification-item" onclick="handleNotificationClick('${esc(n.type || 'general')}', '${esc(n.target_id || '')}')">
+      <div style="font-weight: bold; color: var(--cyan);">${esc(n.title || 'Notification')}</div>
+      <div style="font-size: 13px; color: var(--text); margin-top: 3px;">${esc(n.message || n.content || '')}</div>
+    </div>
+  `).join('');
+}
+
+function handleNotificationClick(type, targetId) {
+  closeMenu();
+
+  if (type === 'message') {
+    showPage("messages");
+    loadChatUsers();
+    if (targetId) {
+      setTimeout(() => {
+        const userItem = Array.from(document.querySelectorAll('.chat-user-item')).find(el => el.getAttribute('onclick')?.includes(targetId));
+        if (userItem) userItem.click();
+      }, 350);
+    }
+  } else if (type === 'post') {
+    showPage("home");
+    if (targetId) {
+      setTimeout(() => {
+        const postElement = document.querySelector(`[data-post-id="${targetId}"]`);
+        if (postElement) {
+          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          postElement.style.borderColor = 'var(--cyan)';
+          setTimeout(() => postElement.style.borderColor = '', 2000);
         }
+      }, 250);
     }
+  } else {
+    showPage("notifications");
+  }
+}
 
-    async function handleLogout() {
-        await supabase.auth.signOut();
-        currentUser = null;
-        showAuth();
+function updateNotificationBadge(count) {
+  const bellBtn = $("topBell");
+  if (!bellBtn) return;
+  
+  let badge = bellBtn.querySelector('.nav-badge');
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      badge.onclick = (e) => {
+        e.stopPropagation();
+        showPage("notifications");
+        loadNotifications();
+        closeMenu();
+      };
+      bellBtn.appendChild(badge);
     }
+    badge.textContent = count;
+  } else if (badge) {
+    badge.remove();
+  }
+}
 
-    function showAuth() {
-        document.getElementById('auth-section').classList.remove('hidden');
-        document.getElementById('app-section').classList.add('hidden');
+function subscribeToNotifications() {
+  if (notificationSubscription) sb.removeChannel(notificationSubscription);
+  if (mode === "cloud" && sb && user) {
+    notificationSubscription = sb.channel('public:notifications')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications', 
+        filter: `user_id=eq.${user.id}` 
+      }, () => {
+        loadNotificationsCount();
+      })
+      .subscribe();
+  }
+}
+
+async function loadChatUsers() {
+  const usersListElem = $("chatUsersList");
+  if (mode !== "cloud" || !sb) {
+    usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">Chat requires cloud mode.</div>';
+    return;
+  }
+
+  const { data, error } = await sb.from('posts').select('user_id, user_name').order('created_at', { ascending: false });
+  if (error || !data) { usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">Failed to load users.</div>'; return; }
+
+  const uniqueUsersMap = new Map();
+  data.forEach(item => {
+    if (item.user_id && item.user_id !== user.id && !uniqueUsersMap.has(item.user_id)) {
+      uniqueUsersMap.set(item.user_id, item.user_name || 'Pixel Friend');
     }
+  });
 
-    function showApp() {
-        document.getElementById('auth-section').classList.add('hidden');
-        document.getElementById('app-section').classList.remove('hidden');
-        document.getElementById('user-display').textContent = `Logged in as: ${currentUser.email}`;
-    }
+  const uniqueUsers = Array.from(uniqueUsersMap.entries());
+  if (uniqueUsers.length === 0) { usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">No other users found yet.</div>'; return; }
 
-    async function createPost() {
-        const content = document.getElementById('post-content').value;
-        if (!content.trim()) return;
+  usersListElem.innerHTML = uniqueUsers.map(([uid, name]) => `
+    <div class="chat-user-item" onclick="selectChatUser('${uid}', '${esc(name)}')">
+      <b>${esc(name)}</b>
+    </div>
+  `).join('');
+}
 
-        const { error } = await supabase.from('posts').insert([
-            { content: content, user_id: currentUser.id, likes_count: 0 }
-        ]);
+function selectChatUser(recipientId, recipientName) {
+  activeRecipient = recipientId;
+  $("chatHeader").textContent = `Chat with ${recipientName}`;
+  $("chatForm").classList.remove("hidden");
+  document.querySelectorAll(".chat-user-item").forEach(el => el.classList.remove("active"));
+  const clickedItem = Array.from(document.querySelectorAll('.chat-user-item')).find(el => el.getAttribute('onclick')?.includes(recipientId));
+  if (clickedItem) clickedItem.classList.add("active");
+  loadMessages();
+  subscribeToMessages();
+}
 
-        if (error) {
-            alert('Error creating post: ' + error.message);
-        } else {
-            document.getElementById('post-content').value = '';
+async function loadMessages() {
+  if (!activeRecipient || !sb) return;
+  const { data, error } = await sb
+    .from('messages')
+    .select('*')
+    .or(`and(sender_id.eq.${user.id},recipient_id.eq.${activeRecipient}),and(sender_id.eq.${activeRecipient},recipient_id.eq.${user.id})`)
+    .order('created_at', { ascending: true });
+
+  const messagesList = $("chatMessagesList");
+  if (error || !data || data.length === 0) { messagesList.innerHTML = '<div class="empty">No messages yet. Start the conversation!</div>'; return; }
+
+  messagesList.innerHTML = data.map(m => {
+    const isSender = m.sender_id === user.id;
+    return `<div class="chat-msg ${isSender ? 'sent' : 'received'}">${esc(m.content)}</div>`;
+  }).join('');
+  messagesList.scrollTop = messagesList.scrollHeight;
+}
+
+async function handleMessageSubmit(event) {
+  event.preventDefault();
+  if (!activeRecipient || !sb) return;
+  const inputElem = $("chatInput");
+  const content = inputElem.value.trim();
+  if (!content) return;
+
+  const { error } = await sb.from('messages').insert({ sender_id: user.id, recipient_id: activeRecipient, content: content });
+  if (error) {
+    alert("Failed to send message: " + error.message);
+  } else {
+    const senderName = displayName();
+    const messagePreview = content.length > 35 ? content.slice(0, 35) + '...' : content;
+
+    await sb.from('notifications').insert([{
+      user_id: activeRecipient,
+      type: 'message',
+      target_id: user.id,
+      title: `Message from ${senderName}`,
+      message: messagePreview,
+      is_read: false
+    }]);
+
+    inputElem.value = ''; 
+    loadMessages(); 
+  }
+}
+
+function subscribeToMessages() {
+  if (chatSubscription) sb.removeChannel(chatSubscription);
+  if (sb && user) {
+    chatSubscription = sb.channel('public:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const msg = payload.new;
+        if ((msg.sender_id === user.id && msg.recipient_id === activeRecipient) || (msg.sender_id === activeRecipient && msg.recipient_id === user.id)) {
+          loadMessages();
         }
-    }
+      })
+      .subscribe();
+  }
+}
 
-    async function loadPosts() {
-        const { data: posts, error } = await supabase
-            .from('posts')
-            .select('*')
-            .order('created_at', { ascending: false });
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
-        if (error) {
-            console.error('Error loading posts:', error);
-            return;
-        }
-
-        const container = document.getElementById('feed-container');
-        container.innerHTML = '';
-        posts.forEach(post => renderPost(post));
-    }
-
-    function renderPost(post) {
-        const container = document.getElementById('feed-container');
-        
-        // Prevent duplicate rendering if already in DOM
-        if (document.getElementById(`post-${post.id}`)) return;
-
-        const postEl = document.createElement('div');
-        postEl.className = 'post-card';
-        postEl.id = `post-${post.id}`;
-        postEl.innerHTML = `
-            <div class="post-header">User: ${post.user_id.substring(0, 8)}...</div>
-            <p>${post.content}</p>
-            <div class="actions">
-                <button onclick="likePost('${post.id}', ${post.likes_count || 0})">❤️ Likes (<span id="likes-${post.id}">${post.likes_count || 0}</span>)</button>
-            </div>
-            <div class="comments-section">
-                <div id="comments-list-${post.id}"></div>
-                <input type="text" id="comment-input-${post.id}" placeholder="Write a comment...">
-                <button onclick="addComment('${post.id}')" style="margin-top:4px;">Post Comment</button>
-            </div>
-        `;
-        container.prepend(postEl);
-        loadCommentsForPost(post.id);
-    }
-
-    async function likePost(postId, currentLikes) {
-        const { error } = await supabase
-            .from('posts')
-            .update({ likes_count: currentLikes + 1 })
-            .eq('id', postId);
-
-        if (error) console.error('Error updating like:', error);
-    }
-
-    async function addComment(postId) {
-        const input = document.getElementById(`comment-input-${postId}`);
-        const text = input.value;
-        if (!text.trim()) return;
-
-        const { error } = await supabase.from('comments').insert([
-            { post_id: postId, user_id: currentUser.id, content: text }
-        ]);
-
-        if (error) alert('Error posting comment: ' + error.message);
-        else input.value = '';
-    }
-
-    async function loadCommentsForPost(postId) {
-        const { data: comments } = await supabase
-            .from('comments')
-            .select('*')
-            .eq('post_id', postId)
-            .order('created_at', { ascending: true });
-
-        if (comments) {
-            const listEl = document.getElementById(`comments-list-${postId}`);
-            listEl.innerHTML = '';
-            comments.forEach(c => {
-                const cEl = document.createElement('div');
-                cEl.className = 'comment-item';
-                cEl.innerHTML = `<b>${c.user_id.substring(0, 6)}:</b> ${c.content}`;
-                listEl.appendChild(cEl);
-            });
-        }
-    }
-
-    // REALTIME SUBSCRIPTIONS
-    function setupRealtime() {
-        // 1. Listen for new posts and post updates (likes)
-        supabase.channel('public:posts')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
-                renderPost(payload.new);
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
-                const likeSpan = document.getElementById(`likes-${payload.new.id}`);
-                if (likeSpan) {
-                    likeSpan.textContent = payload.new.likes_count;
-                }
-            })
-            .subscribe();
-
-        // 2. Listen for new comments
-        supabase.channel('public:comments')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, (payload) => {
-                loadCommentsForPost(payload.new.post_id);
-            })
-            .subscribe();
-    }
-
-    // Run initialization on load
-    init();
+buildNav(); initSupabase();
+(async()=>{if(sb){try{const {data}=await sb.auth.getSession();if(data.session){user=data.session.user;mode="cloud";openApp()}}catch(e){}}})();
 </script>
-
-</body>
-</html>
+</body></html>

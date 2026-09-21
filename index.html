@@ -1,566 +1,82 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Friends — Cyber Community</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-:root{--bg:#03060b;--panel:#071019;--panel2:#0b1520;--line:#183142;--cyan:#39e7ff;--blue:#5c7cff;--pink:#ff4fd8;--text:#eaf7ff;--muted:#7691a5;--good:#49f0a0;--danger:#ff587c;--shadow:0 0 35px #0008}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#09253a55,transparent 35%),linear-gradient(135deg,#02050a,#06101a 55%,#03070d);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif;min-height:100vh}
-button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
-#auth{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-box{width:min(460px,100%);background:#061019ee;border:1px solid #1b4357;border-radius:18px;padding:30px;box-shadow:0 0 70px #00d9ff18}
-.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px}.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
-.field{margin:12px 0}.field label{display:block;color:#9eb7c8;font-size:12px;margin-bottom:6px}.field input,.composer textarea,.search{width:100%;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:9px;padding:12px;outline:none}.field input:focus,.composer textarea:focus,.search:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #39e7ff15}
-.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}
-#app{display:none;min-height:100vh}
-
-.shell{display:block;min-height:100vh}
-.side{border-right:1px solid var(--line);background:#040a10f8;padding:22px 14px;position:fixed;top:0;left:0;bottom:0;width:270px;z-index:30;display:flex;flex-direction:column;justify-content:space-between;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:5px 0 35px rgba(0,0,0,0.8)}
-.side.open{transform:translateX(0)}
-.side .logo{font-size:20px;padding:0 10px 25px;cursor:pointer}
-.nav{display:grid;gap:7px}
-.nav button{text-align:left;border-color:transparent;position:relative}
-.nav button.active{border-color:#21485b}
-.badge{background:var(--pink);color:white;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:10px;position:absolute;right:10px;top:50%;transform:translateY(-50%)}
-.side-bottom{padding-top:18px;border-top:1px solid var(--line)}
-.profile-mini{padding:12px;border:1px solid var(--line);border-radius:10px;background:#08131d;margin-bottom:8px}
-.profile-mini b{display:block}
-
-.main{min-width:0}
-.top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 22px;background:#050b11dd;position:sticky;top:0;z-index:5}
-.spacer{flex:1}
-.menu-btn{width:42px;height:42px;border:1px solid #1d526d;border-radius:9px;background:#071521;color:var(--cyan);font-size:22px;display:grid;place-items:center}
-.brand-mini{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
-.brand-icon{width:38px;height:38px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);box-shadow:0 0 16px #39e7ff33;font-size:17px}
-.brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
-.brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
-.profile-btn{display:flex;align-items:center;gap:9px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
-.profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:900}
-.page{display:none;padding:26px;max-width:1300px;margin:auto}
-.page.active{display:block}
-.hero{border:1px solid #1d4b60;border-radius:18px;padding:28px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22);position:relative;overflow:hidden}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
-.card{background:#07111aee;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
-.card h3{margin:0 0 14px}
-.composer textarea{min-height:90px;resize:vertical}
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-.feed,.notif-list{display:grid;gap:12px;margin-top:12px}
-.post,.notif-item{border:1px solid #173344;border-radius:12px;padding:15px;background:#08131c}
-.post-head{display:flex;gap:10px;align-items:center}
-.avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900}
-.muted{color:var(--muted)}
-.post-body{padding:12px 0}
-.media-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.preview-item{position:relative;max-width:200px}
-.preview-item img,.preview-item video{max-width:100%;border-radius:8px;border:1px solid var(--line)}
-.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center}
-.post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
-.post-media audio{width:100%;margin-top:10px}
-.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
-.page-title{font-size:28px;margin:0 0 5px}
-.page-sub{color:var(--muted);margin:0 0 20px}
-.drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
-.drawer-backdrop.active{display:block}
-
-.chat-box{display:flex;flex-direction:column;height:500px;border:1px solid var(--line);border-radius:12px;background:#050d14;overflow:hidden}
-.chat-messages{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
-.chat-msg{max-width:75%;padding:10px 14px;border-radius:12px;background:#0a1a26;border:1px solid #16384d;align-self:flex-start}
-.chat-msg.me{align-self:flex-end;background:#0d3247;border-color:var(--cyan)}
-.chat-msg .sender{font-size:11px;color:var(--cyan);font-weight:bold;margin-bottom:3px}
-.chat-msg .time{font-size:9px;color:var(--muted);margin-top:4px;text-align:right}
-.chat-input-row{display:flex;gap:8px;padding:12px;background:#07121c;border-top:1px solid var(--line)}
-.chat-input-row input{flex:1;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:8px;padding:10px;outline:none}
-
-@media(max-width:850px){
-  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:20;background:#050b11f5;border-top:1px solid var(--line);padding:7px;gap:5px;overflow:auto}
-  .mobile-nav button{flex:1;min-width:72px}
-  .top{padding:10px 14px}
-  .page{padding:16px 14px 82px}
-  .grid{grid-template-columns:1fr}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Friends</title>
 </head>
 <body>
 
-<section id="auth">
-  <div class="auth-box">
-    <div class="logo">PIXEL FRIENDS</div>
-    <div class="sub">A fresh cyber community — your space, your people.</div>
-    <div class="tabs"><button id="loginTab" class="active">LOGIN</button><button id="registerTab">REGISTER</button></div>
-    <form id="authForm">
-      <div class="field"><label>EMAIL</label><input id="email" type="email" required autocomplete="email"></div>
-      <div class="field"><label>PASSWORD</label><input id="password" type="password" required minlength="6" autocomplete="current-password"></div>
-      <div class="field hidden" id="nameField"><label>DISPLAY NAME</label><input id="displayName" maxlength="30"></div>
-      <button class="primary" id="authSubmit">ENTER PIXEL FRIENDS</button>
-    </form>
-    <div class="status" id="authStatus"></div>
-    <button class="secondary" id="demoBtn" style="width:100%;margin-top:12px">CONTINUE IN DEMO MODE</button>
-  </div>
-</section>
+  <h1>Pixel Friends</h1>
+  <p>Real-time chat & notifications</p>
 
-<div id="app">
-<div class="drawer-backdrop" id="drawerBackdrop"></div>
-<div class="shell">
-<aside class="side" id="sideDrawer">
-  <div>
-    <div class="logo" id="sideLogo">PIXEL FRIENDS</div>
-    <nav class="nav" id="sideNav"></nav>
-  </div>
-  <div class="side-bottom">
-    <div class="profile-mini">
-      <span class="muted">SIGNED IN AS</span>
-      <b id="sideName">Guest</b>
-    </div>
-    <button class="secondary" id="logout" style="width:100%">LOG OUT</button>
-  </div>
-</aside>
+  <!-- Supabase & Web Push Implementation -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-<main class="main">
-<header class="top">
-  <button class="menu-btn" id="menuBtn">☰</button>
-  <div class="brand-mini" id="brandBtn">
-    <div class="brand-icon">◉</div>
-    <div>
-      <div class="brand-name">PIXEL FRIENDS</div>
-      <div class="brand-sub">CONNECT • CHAT • SHARE</div>
-    </div>
-  </div>
-  <div class="spacer"></div>
-  <button class="secondary" id="enableNotifBtn" style="font-size:12px;margin-right:8px">🔔 Enable Alerts</button>
-  <button class="profile-btn" id="topProfile">
-    <span class="profile-avatar" id="topAvatar">PF</span>
-    <span>Profile</span>
-  </button>
-</header>
+    // 1. Supabase Client Setup
+    const SUPABASE_URL = 'https://koljxgkatllfexwoxnfi.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-<section class="page active" id="home">
-  <div class="hero">
-    <h1 id="welcome">Welcome, Pixel Friend.</h1>
-    <p>Real-time community active across global feed, direct chat, and system notifications.</p>
-  </div>
-  <div class="grid">
-    <div>
-      <div class="card composer">
-        <h3>Share something</h3>
-        <textarea id="postText" placeholder="Clipboard paste (Ctrl+V) images, text, audio, video..."></textarea>
-        <input type="file" id="mediaInput" accept="image/*,video/*,audio/*" class="hidden">
-        <div id="mediaPreview" class="media-preview"></div>
-        <div class="row" style="margin-top:10px">
-          <button class="secondary" id="uploadImgBtn">🖼️ Image</button>
-          <button class="secondary" id="uploadVidBtn">🎥 Video</button>
-          <button class="secondary" id="uploadAudBtn">🎵 Audio</button>
-          <div class="spacer"></div>
-          <button class="primary" style="width:auto" id="postBtn">POST</button>
-        </div>
-      </div>
-      <div class="card" style="margin-top:18px">
-        <h3>Community Feed</h3>
-        <div class="feed" id="feed"><div class="empty">Loading real-time posts...</div></div>
-      </div>
-    </div>
-    <div>
-      <div class="card">
-        <h3>Online Members</h3>
-        <div class="list" id="onlineList"><div class="empty">No other members active right now.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="page" id="messages">
-  <h2 class="page-title">Live Chat Room</h2>
-  <p class="page-sub">Global realtime message board for all connected members.</p>
-  <div class="chat-box">
-    <div class="chat-messages" id="chatMessages"><div class="empty">Loading chat...</div></div>
-    <form id="chatForm" class="chat-input-row">
-      <input id="chatInput" placeholder="Type a message..." autocomplete="off">
-      <button class="primary" style="width:auto;margin:0">Send</button>
-    </form>
-  </div>
-</section>
-
-<section class="page" id="notifications">
-  <h2 class="page-title">Notifications</h2>
-  <p class="page-sub">Live alerts from community activity.</p>
-  <div class="notif-list" id="notifList"><div class="empty">No notifications yet.</div></div>
-</section>
-
-<section class="page" id="friends"><h2 class="page-title">Friends</h2><div class="card"><div class="empty">Friends system active.</div></div></section>
-<section class="page" id="playlist"><h2 class="page-title">Playlist</h2><div class="card"><div class="empty">Audio storage active.</div></div></section>
-<section class="page" id="profile"><h2 class="page-title">Profile</h2><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
-<section class="page" id="settings"><h2 class="page-title">Settings</h2><div class="card"><div class="stat"><span>Realtime Engine</span><b>Supabase WebSockets & Push API</b></div></div></section>
-</main>
-</div>
-<nav class="mobile-nav" id="mobileNav"></nav>
-</div>
-
-<script>
-const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
-const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
-const VAPID_PUBLIC_KEY = 'BKOHk7vMzEGb-SmM73Z-X9twiBWJckX86mq4oTkqeHVsy8UgyjRIWtnPX6aPBorvCwvKiginsbja1OcaZy5HYIo';
-
-let sb=null, mode="cloud", user=null;
-let posts=[], messages=[], notifications=[];
-let unreadNotifs = 0;
-let currentMediaFile = null, currentMediaType = null, mediaPreviewSrc = null;
-
-const navItems=[
- ["home","⌂","Home"],["messages","✉","Messages"],
- ["notifications","◉","Notifications"],["friends","♢","Friends"],
- ["playlist","♫","Playlist"],["profile","◎","Profile"],["settings","⚙","Settings"]
-];
-
-function $(id){return document.getElementById(id)}
-
-function initSupabase(){
-  try{
-    if(window.supabase?.createClient) {
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      setupRealtimeSubscriptions();
-    }
-  }catch(e){ sb = null; }
-}
-
-/* Service Worker & Browser Web Push Registration */
-async function registerServiceWorker() {
-  if ('serviceWorker' in navigator && 'PushManager' in window) {
-    try {
-      const reg = await navigator.serviceWorker.register('sw.js');
-      console.log('Service Worker Registered:', reg);
-    } catch (e) {
-      console.warn('Service Worker registration failed:', e);
-    }
-  }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-async function subscribeUserToPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (!sb || !user || mode !== 'cloud') return;
-
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    let subscription = await registration.pushManager.getSubscription();
-
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-    }
-
-    // Upsert subscription to database
-    await sb.from('push_subscriptions').upsert({
-      user_id: user.id,
-      subscription: subscription.toJSON()
-    }, { onConflict: 'user_id' });
-
-    console.log('Background push subscription active!');
-  } catch (err) {
-    console.error('Failed to subscribe to Web Push:', err);
-  }
-}
-
-async function requestNotificationPermission() {
-  if (!("Notification" in window)) {
-    alert("This browser does not support desktop notifications.");
-    return;
-  }
-  const permission = await Notification.requestPermission();
-  if (permission === "granted") {
-    $("enableNotifBtn").style.display = "none";
-    subscribeUserToPush();
-    showSystemNotification("Pixel Friends", "System & background alerts are active!");
-  }
-}
-
-function showSystemNotification(title, body) {
-  if (Notification.permission === "granted") {
-    navigator.serviceWorker?.ready.then(reg => {
-      reg.showNotification(title, { body, icon: '/icon.png', badge: '/badge.png' });
-    }).catch(() => {
-      new Notification(title, { body });
-    });
-  }
-}
-
-$("enableNotifBtn").onclick = requestNotificationPermission;
-
-function buildNav(){
-  for(const host of [$("sideNav"),$("mobileNav")]){
-    if(!host) continue;
-    host.innerHTML=navItems.map(([id,icon,label])=>`
-      <button data-page="${id}">${icon} &nbsp; ${label} ${id==='notifications'?'<span id="notifBadge" class="badge hidden">0</span>':''}</button>
-    `).join("");
-    host.querySelectorAll("button").forEach(b=>b.onclick=()=>{
-      showPage(b.dataset.page);
-      closeMenu();
-    });
-  }
-}
-
-function showPage(id){
- document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));
- document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
- if(id==='notifications'){ unreadNotifs=0; updateNotifBadge(); }
-}
-
-function toggleMenu(){ $("sideDrawer")?.classList.toggle("open"); $("drawerBackdrop")?.classList.toggle("active"); }
-function closeMenu(){ $("sideDrawer")?.classList.remove("open"); $("drawerBackdrop")?.classList.remove("active"); }
-
-function displayName(){
- return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Pixel Friend";
-}
-
-function openApp(){
- $("auth").classList.add("hidden"); $("app").style.display="block";
- $("sideName").textContent=displayName(); $("welcome").textContent=`Welcome, ${displayName()}.`;
- $("profileName").textContent=displayName(); $("profileEmail").textContent=user?.email||"Demo";
- if(Notification.permission === "granted") {
-   $("enableNotifBtn").style.display = "none";
-   subscribeUserToPush();
- }
- fetchPosts(); fetchMessages(); fetchNotifications();
- showPage("home");
-}
-
-function closeApp(){ $("app").style.display="none"; $("auth").classList.remove("hidden"); }
-function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
-
-let register=false;
-$("loginTab").onclick=()=>{register=false;syncAuth()};
-$("registerTab").onclick=()=>{register=true;syncAuth()};
-function syncAuth(){
-  $("loginTab").classList.toggle("active",!register); $("registerTab").classList.toggle("active",register);
-  $("nameField").classList.toggle("hidden",!register); $("authSubmit").textContent=register?"CREATE ACCOUNT":"LOGIN";
-}
-
-$("authForm").onsubmit=async e=>{
- e.preventDefault(); setStatus("Connecting...",false);
- const email=$("email").value.trim(), password=$("password").value, display=$("displayName").value.trim();
- if(!sb){ setStatus("Cloud setup issue. Check API configuration."); return; }
- try{
-   if(register){
-     const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:display||email.split("@")[0]}}});
-     if(error) throw error;
-     if(data.session){ user=data.user; mode="cloud"; openApp(); }
-     else setStatus("Account registered. You can now log in.", false);
-   }else{
-     const {data,error}=await sb.auth.signInWithPassword({email,password});
-     if(error) throw error;
-     user=data.user; mode="cloud"; openApp();
-   }
- }catch(err){ setStatus(err.message||"Auth error"); }
-};
-
-$("demoBtn").onclick=()=>{ mode="demo"; user={id:"demo-123",email:"demo@pixelfriends.local",user_metadata:{display_name:"Pixel Friend"}}; openApp(); };
-$("logout").onclick=async()=>{ if(sb) await sb.auth.signOut(); user=null; closeApp(); };
-$("menuBtn").onclick=toggleMenu; $("drawerBackdrop").onclick=closeMenu;
-
-/* File / Media Preview */
-function setMediaFile(file) {
-  if (!file) return;
-  currentMediaFile = file;
-  currentMediaType = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
-  const reader = new FileReader();
-  reader.onload = (e) => { mediaPreviewSrc = e.target.result; renderMediaPreview(); };
-  reader.readAsDataURL(file);
-}
-
-function renderMediaPreview() {
-  const container = $("mediaPreview");
-  if (!mediaPreviewSrc) { container.innerHTML = ""; return; }
-  let html = currentMediaType === 'image' ? `<img src="${mediaPreviewSrc}">` :
-             currentMediaType === 'video' ? `<video src="${mediaPreviewSrc}" controls></video>` :
-             `<audio src="${mediaPreviewSrc}" controls></audio>`;
-  container.innerHTML = `<div class="preview-item">${html}<button class="remove-btn" onclick="removeMedia()">✕</button></div>`;
-}
-
-function removeMedia() { currentMediaFile = null; currentMediaType = null; mediaPreviewSrc = null; renderMediaPreview(); }
-
-$("postText").addEventListener("paste", (e) => {
-  for (let item of (e.clipboardData || e.originalEvent.clipboardData).items) {
-    if (item.kind === 'file') setMediaFile(item.getAsFile());
-  }
-});
-
-$("uploadImgBtn").onclick = () => { $("mediaInput").accept = "image/*"; $("mediaInput").click(); };
-$("uploadVidBtn").onclick = () => { $("mediaInput").accept = "video/*"; $("mediaInput").click(); };
-$("uploadAudBtn").onclick = () => { $("mediaInput").accept = "audio/*"; $("mediaInput").click(); };
-$("mediaInput").onchange = (e) => { if (e.target.files?.[0]) setMediaFile(e.target.files[0]); };
-
-/* Upload and Posts */
-async function uploadMedia(file) {
-  if (!sb || mode !== "cloud") return null;
-  const path = `${Date.now()}_${Math.random().toString(36).substr(2)}.${file.name?file.name.split('.').pop():'png'}`;
-  const { error } = await sb.storage.from('post-media').upload(path, file);
-  if (error) return null;
-  return sb.storage.from('post-media').getPublicUrl(path).data.publicUrl;
-}
-
-$("postBtn").onclick = async () => {
- const text = $("postText").value.trim();
- if (!text && !currentMediaFile) return;
- $("postBtn").disabled = true;
- 
- let url = currentMediaFile && mode === "cloud" ? await uploadMedia(currentMediaFile) : mediaPreviewSrc;
- const postObj = { user_id: user?.id, author_name: displayName(), text, media_url: url, media_type: currentMediaType };
-
- if (mode === "cloud" && sb) {
-   await sb.from('posts').insert([postObj]);
-   await sb.from('notifications').insert([{ type: 'post', title: 'New Community Post', message: `${displayName()} created a new post.` }]);
- } else {
-   posts.unshift({...postObj, created_at: new Date().toISOString()});
-   renderFeed();
- }
- $("postText").value = ""; removeMedia();
- $("postBtn").disabled = false;
-};
-
-async function fetchPosts() {
-  if (mode === "cloud" && sb) {
-    const { data } = await sb.from('posts').select('*').order('created_at', { ascending: false });
-    if (data) posts = data;
-  }
-  renderFeed();
-}
-
-function renderFeed() {
- const f = $("feed");
- if (!posts.length) { f.innerHTML = '<div class="empty">No posts yet.</div>'; return; }
- f.innerHTML = posts.map(p => {
-   let m = p.media_url ? `<div class="post-media">${p.media_type==='video'?`<video src="${p.media_url}" controls></video>`:p.media_type==='audio'?`<audio src="${p.media_url}" controls></audio>`:`<img src="${p.media_url}">`}</div>` : '';
-   return `<article class="post">
-     <div class="post-head"><div class="avatar">${esc((p.author_name||'PF').slice(0,2).toUpperCase())}</div><div><b>${esc(p.author_name)}</b><div class="muted">${new Date(p.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div></div>
-     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}${m}
-   </article>`;
- }).join("");
-}
-
-/* Chat Operations */
-$("chatForm").onsubmit = async (e) => {
-  e.preventDefault();
-  const content = $("chatInput").value.trim();
-  if(!content) return;
-  $("chatInput").value = "";
-
-  const msgObj = { sender_id: user?.id, sender_name: displayName(), content };
-  if(mode === "cloud" && sb) {
-    await sb.from('messages').insert([msgObj]);
-    await sb.from('notifications').insert([{ type: 'chat', title: 'New Message', message: `${displayName()} sent a chat message.` }]);
-  } else {
-    messages.push({...msgObj, created_at: new Date().toISOString()});
-    renderChat();
-  }
-};
-
-async function fetchMessages() {
-  if (mode === "cloud" && sb) {
-    const { data } = await sb.from('messages').select('*').order('created_at', { ascending: true });
-    if (data) messages = data;
-  }
-  renderChat();
-}
-
-function renderChat() {
-  const c = $("chatMessages");
-  if (!messages.length) { c.innerHTML = '<div class="empty">No chat messages yet.</div>'; return; }
-  c.innerHTML = messages.map(m => `
-    <div class="chat-msg ${m.sender_id === user?.id ? 'me' : ''}">
-      <div class="sender">${esc(m.sender_name)}</div>
-      <div>${esc(m.content)}</div>
-      <div class="time">${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
-    </div>
-  `).join("");
-  c.scrollTop = c.scrollHeight;
-}
-
-/* Notifications */
-async function fetchNotifications() {
-  if (mode === "cloud" && sb) {
-    const { data } = await sb.from('notifications').select('*').order('created_at', { ascending: false });
-    if (data) notifications = data;
-  }
-  renderNotifications();
-}
-
-function renderNotifications() {
-  const n = $("notifList");
-  if (!notifications.length) { n.innerHTML = '<div class="empty">No notifications yet.</div>'; return; }
-  n.innerHTML = notifications.map(item => `
-    <div class="notif-item">
-      <b>${esc(item.title)}</b>
-      <div>${esc(item.message)}</div>
-      <div class="muted" style="font-size:10px;margin-top:4px">${new Date(item.created_at).toLocaleTimeString()}</div>
-    </div>
-  `).join("");
-}
-
-function updateNotifBadge() {
-  const badge = $("notifBadge");
-  if(badge) {
-    if(unreadNotifs > 0) { badge.textContent = unreadNotifs; badge.classList.remove("hidden"); }
-    else { badge.classList.add("hidden"); }
-  }
-}
-
-/* Supabase Realtime Listeners */
-function setupRealtimeSubscriptions() {
-  if (!sb) return;
-
-  sb.channel('public:posts')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
-      posts.unshift(payload.new);
-      renderFeed();
-      if (payload.new.user_id !== user?.id) {
-        showSystemNotification("New Post Alert", `${payload.new.author_name} posted something new.`);
+    // 2. Base64 URL to Uint8Array converter for VAPID Key
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
       }
-    }).subscribe();
+      return outputArray;
+    }
 
-  sb.channel('public:messages')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-      messages.push(payload.new);
-      renderChat();
-      if (payload.new.sender_id !== user?.id) {
-        showSystemNotification(`Message from ${payload.new.sender_name}`, payload.new.content);
+    // 3. Register Service Worker and subscribe user to push
+    export async function subscribeUserToPush(userId) {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Push messaging is not supported in this browser.');
+        return;
       }
-    }).subscribe();
 
-  sb.channel('public:notifications')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, payload => {
-      notifications.unshift(payload.new);
-      renderNotifications();
-      unreadNotifs++;
-      updateNotifBadge();
-    }).subscribe();
-}
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        const permission = await Notification.requestPermission();
+        
+        if (permission !== 'granted') {
+          console.warn('Notification permission not granted.');
+          return;
+        }
 
-function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+        const VAPID_PUBLIC_KEY = 'BIVFWH78Xnr9zCgQkvsSB2lXmWDt2Tf-rRa1WRNSyQQfhZRXL16f2MPmwKNAeaj29gREr5R_WxSG20IIvmaQAnI';
 
-buildNav();
-registerServiceWorker();
-initSupabase();
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
 
-(async()=>{
-  if(sb){
-    try{
-      const {data}=await sb.auth.getSession();
-      if(data.session){ user=data.session.user; mode="cloud"; openApp(); }
-    }catch(e){}
-  }
-})();
-</script>
+        // Save subscription object to push_subscriptions table
+        const { error } = await supabase.from('push_subscriptions').upsert({
+          user_id: userId,
+          subscription: subscription.toJSON(),
+        });
+
+        if (error) throw error;
+
+        console.log('Push subscription activated successfully!');
+      } catch (err) {
+        console.error('Push registration error:', err);
+      }
+    }
+
+    // 4. Auto-trigger on page load if user is logged in
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await subscribeUserToPush(session.user.id);
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>

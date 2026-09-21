@@ -280,27 +280,65 @@ let register=false;
 $("loginTab").onclick=()=>{register=false;syncAuthMode()};
 $("registerTab").onclick=()=>{register=true;syncAuthMode()};
 
-function syncAuthMode(){$("loginTab").classList.toggle("active",!register);$("registerTab").classList.toggle("active",register);$("nameField").classList.toggle("hidden",!register);$("authSubmit").textContent=register?"CREATE PIXEL FRIENDS ACCOUNT":"ENTER PIXEL FRIENDS";$("authStatus").textContent=""}
+function syncAuthMode(){
+  $("loginTab").classList.toggle("active",!register);
+  $("registerTab").classList.toggle("active",register);
+  $("nameField").classList.toggle("hidden",!register);
+  $("authSubmit").textContent=register?"CREATE PIXEL FRIENDS ACCOUNT":"ENTER PIXEL FRIENDS";
+  $("authStatus").textContent="";
+}
 
+/* Authentication logic supporting multi-device signups */
 $("authForm").onsubmit=async e=>{
- e.preventDefault();setStatus("Connecting…",false);
- const email=$("email").value.trim(),password=$("password").value,display=$("displayName").value.trim();
- if(!sb){setStatus("Cloud authentication is unavailable. Use Demo Mode.");return}
+ e.preventDefault();
+ setStatus("Connecting…",false);
+ const email=$("email").value.trim(), password=$("password").value, display=$("displayName").value.trim();
+ 
+ if(!sb){
+   setStatus("Cloud authentication is unavailable. Use Demo Mode.");
+   return;
+ }
+ 
  try{
   if(register){
-   const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:display||email.split("@")[0]}}});
-   if(error)throw error;
-   if(data.session){user=data.user;openApp()}else setStatus("Account created. Check your email to confirm your account.",false);
-  }else{
-   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;user=data.user;mode="cloud";openApp();
+   const {data, error} = await sb.auth.signUp({
+     email,
+     password,
+     options:{
+       data: { display_name: display || email.split("@")[0] }
+     }
+   });
+   
+   if(error) throw error;
+   
+   if(data.session){
+     user = data.user;
+     mode = "cloud";
+     openApp();
+   } else {
+     setStatus("Account created! If email confirmation is enabled on Supabase, please verify your email. Otherwise, switch to Login tab to log in.", false);
+   }
+  } else {
+   const {data, error} = await sb.auth.signInWithPassword({email, password});
+   if(error) throw error;
+   user = data.user;
+   mode = "cloud";
+   openApp();
   }
- }catch(err){setStatus(err?.message||"Authentication failed.")}
+ }catch(err){
+   setStatus(err?.message || "Authentication failed.");
+ }
 };
 
-$("demoBtn").onclick=()=>{mode="demo";user={id:"demo-"+Date.now(),email:"demo@pixelfriends.local",user_metadata:{display_name:"Pixel Friend"}};localStorage.setItem("pf_demo_name","Pixel Friend");openApp()};
+$("demoBtn").onclick=()=>{
+  mode="demo";
+  user={id:"demo-"+Date.now(),email:"demo@pixelfriends.local",user_metadata:{display_name:"Pixel Friend"}};
+  localStorage.setItem("pf_demo_name","Pixel Friend");
+  openApp();
+};
 
 $("logout").onclick=async()=>{
-  if(mode==="cloud"&&sb)try{await sb.auth.signOut()}catch(e){}
+  if(mode==="cloud"&&sb) try{ await sb.auth.signOut() }catch(e){}
   user=null;
   closeMenu();
   closeApp();

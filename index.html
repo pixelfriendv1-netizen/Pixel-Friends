@@ -13,7 +13,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 #auth{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-box{width:min(460px,100%);background:#061019ee;border:1px solid #1b4357;border-radius:18px;padding:30px;box-shadow:0 0 70px #00d9ff18}
 .logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px;position:relative}
 .tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
-.nav-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border-radius:50%;padding:2px 6px;font-size:10px;font-weight:bold;z-index:10;box-shadow:0 0 10px var(--danger)}
+.nav-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border-radius:50%;padding:2px 6px;font-size:10px;font-weight:bold;z-index:10;box-shadow:0 0 10px var(--danger);cursor:pointer}
 .field{margin:12px 0}.field label{display:block;color:#9eb7c8;font-size:12px;margin-bottom:6px}.field input,.composer textarea,.search{width:100%;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:9px;padding:12px;outline:none}.field input:focus,.composer textarea:focus,.search:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #39e7ff15}
 .primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}
 #app{display:none;min-height:100vh}
@@ -59,7 +59,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .composer textarea{min-height:90px;resize:vertical}
 .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .feed{display:grid;gap:12px;margin-top:12px}
-.post{border:1px solid #173344;border-radius:12px;padding:15px;background:#08131c}
+.post{border:1px solid #173344;border-radius:12px;padding:15px;background:#08131c;transition:border-color 0.3s}
 .post-head{display:flex;gap:10px;align-items:center}
 .avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900}
 .muted{color:var(--muted)}
@@ -85,6 +85,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .chat-msg{max-width:70%;padding:10px;border-radius:8px;font-size:13px}
 .chat-msg.sent{background:#0b2530;border:1px solid #174a5c;align-self:flex-end;color:var(--cyan)}
 .chat-msg.received{background:#0b1520;border:1px solid var(--line);align-self:flex-start}
+
+.notification-item{padding: 14px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background 0.2s; border-radius: 6px;}
+.notification-item:hover{background: #081522;}
 
 @media(max-width:850px){
   .chat-container{grid-template-columns:1fr}
@@ -152,7 +155,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   <div class="spacer"></div>
   
   <div class="header-actions">
-    <!-- Separate Notification Bell Button -->
+    <!-- Separate Notification Bell Button with Badge Support -->
     <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications">
       <span style="font-size: 16px;">🔔</span>
     </button>
@@ -405,7 +408,7 @@ $("postBtn").onclick = async () => {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
   } else {
-    posts.unshift({ ...newPost, created_at: new Date().toISOString() });
+    posts.unshift({ ...newPost, id: 'local-' + Date.now(), created_at: new Date().toISOString() });
     renderFeed();
   }
   $("postText").value = "";
@@ -432,6 +435,8 @@ function subscribeToPosts() {
         if (payload.new.user_id !== user?.id) {
           await sb.from('notifications').insert([{
             user_id: user.id,
+            type: 'post',
+            target_id: payload.new.id,
             title: 'New Feed Activity',
             message: `${payload.new.user_name || 'A friend'} shared a new post.`,
             is_read: false
@@ -452,7 +457,7 @@ function renderFeed(){
      else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
      else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
    }
-   return `<article class="post" data-post-id="${p.id}">
+   return `<article class="post" data-post-id="${p.id || ''}">
      <div class="post-head">
        <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
        <div><b>${esc(name)}</b><div class="muted">Just now</div></div>
@@ -463,7 +468,7 @@ function renderFeed(){
  }).join("");
 }
 
-/* --- Notifications & Unread Badge Counter Logic (Attached to Bell Button) --- */
+/* --- Notifications & Unread Badge Counter Logic --- */
 async function loadNotificationsCount() {
   if (mode !== "cloud" || !sb || !user) return;
   const { count, error } = await sb
@@ -503,15 +508,44 @@ async function loadNotifications() {
   await sb.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
 
   container.innerHTML = data.map(n => `
-    <div style="padding: 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;">
+    <div class="notification-item" onclick="handleNotificationClick('${esc(n.type || 'general')}', '${esc(n.target_id || '')}')">
       <div style="font-weight: bold; color: var(--cyan);">${esc(n.title || 'Notification')}</div>
-      <div style="font-size: 13px; color: var(--text);">${esc(n.message || n.content || '')}</div>
+      <div style="font-size: 13px; color: var(--text); margin-top: 3px;">${esc(n.message || n.content || '')}</div>
     </div>
   `).join('');
 }
 
+function handleNotificationClick(type, targetId) {
+  closeMenu();
+
+  if (type === 'message') {
+    showPage("messages");
+    loadChatUsers();
+    if (targetId) {
+      setTimeout(() => {
+        const userItem = Array.from(document.querySelectorAll('.chat-user-item')).find(el => el.getAttribute('onclick')?.includes(targetId));
+        if (userItem) userItem.click();
+      }, 350);
+    }
+  } else if (type === 'post') {
+    showPage("home");
+    if (targetId) {
+      setTimeout(() => {
+        const postElement = document.querySelector(`[data-post-id="${targetId}"]`);
+        if (postElement) {
+          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          postElement.style.borderColor = 'var(--cyan)';
+          setTimeout(() => postElement.style.borderColor = '', 2000);
+        }
+      }, 250);
+    }
+  } else {
+    showPage("notifications");
+  }
+}
+
 function updateNotificationBadge(count) {
-  const bellBtn = $("topBell"); // Badge is now on the bell button!
+  const bellBtn = $("topBell");
   if (!bellBtn) return;
   
   let badge = bellBtn.querySelector('.nav-badge');
@@ -519,6 +553,12 @@ function updateNotificationBadge(count) {
     if (!badge) {
       badge = document.createElement('span');
       badge.className = 'nav-badge';
+      badge.onclick = (e) => {
+        e.stopPropagation();
+        showPage("notifications");
+        loadNotifications();
+        closeMenu();
+      };
       bellBtn.appendChild(badge);
     }
     badge.textContent = count;
@@ -576,7 +616,8 @@ function selectChatUser(recipientId, recipientName) {
   $("chatHeader").textContent = `Chat with ${recipientName}`;
   $("chatForm").classList.remove("hidden");
   document.querySelectorAll(".chat-user-item").forEach(el => el.classList.remove("active"));
-  event.currentTarget.classList.add("active");
+  const clickedItem = Array.from(document.querySelectorAll('.chat-user-item')).find(el => el.getAttribute('onclick')?.includes(recipientId));
+  if (clickedItem) clickedItem.classList.add("active");
   loadMessages();
   subscribeToMessages();
 }
@@ -607,8 +648,22 @@ async function handleMessageSubmit(event) {
   if (!content) return;
 
   const { error } = await sb.from('messages').insert({ sender_id: user.id, recipient_id: activeRecipient, content: content });
-  if (error) alert("Failed to send message: " + error.message);
-  else { inputElem.value = ''; loadMessages(); }
+  if (error) {
+    alert("Failed to send message: " + error.message);
+  } else {
+    // Also trigger notification for the recipient
+    await sb.from('notifications').insert([{
+      user_id: activeRecipient,
+      type: 'message',
+      target_id: user.id,
+      title: 'New Message',
+      message: `${displayName()} sent you a direct message.`,
+      is_read: false
+    }]);
+
+    inputElem.value = ''; 
+    loadMessages(); 
+  }
 }
 
 function subscribeToMessages() {
@@ -625,7 +680,7 @@ function subscribeToMessages() {
   }
 }
 
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 buildNav(); initSupabase();
 (async()=>{if(sb){try{const {data}=await sb.auth.getSession();if(data.session){user=data.session.user;mode="cloud";openApp()}}catch(e){}}})();

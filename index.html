@@ -48,7 +48,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .feed,.notif-list{display:grid;gap:12px;margin-top:12px}
 .post,.notif-item{border:1px solid #173344;border-radius:12px;padding:15px;background:#08131c}
-.notif-item.unread{border-color:var(--cyan);background:#0a1c28}
 .post-head{display:flex;gap:10px;align-items:center}
 .avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900}
 .muted{color:var(--muted)}
@@ -65,7 +64,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
 .drawer-backdrop.active{display:block}
 
-/* Realtime Chat Styling */
 .chat-box{display:flex;flex-direction:column;height:500px;border:1px solid var(--line);border-radius:12px;background:#050d14;overflow:hidden}
 .chat-messages{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
 .chat-msg{max-width:75%;padding:10px 14px;border-radius:12px;background:#0a1a26;border:1px solid #16384d;align-self:flex-start}
@@ -130,6 +128,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
     </div>
   </div>
   <div class="spacer"></div>
+  <button class="secondary" id="enableNotifBtn" style="font-size:12px;margin-right:8px">🔔 Enable Alerts</button>
   <button class="profile-btn" id="topProfile">
     <span class="profile-avatar" id="topAvatar">PF</span>
     <span>Profile</span>
@@ -139,7 +138,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <section class="page active" id="home">
   <div class="hero">
     <h1 id="welcome">Welcome, Pixel Friend.</h1>
-    <p>Real-time community active across global feed, direct chat, and system notifications.</p>
+    <p>Real-time community with background OS popups when minimized.</p>
   </div>
   <div class="grid">
     <div>
@@ -222,6 +221,42 @@ function initSupabase(){
   }catch(e){ sb = null; }
 }
 
+/* Service Worker & Browser Desktop Notifications */
+async function registerServiceWorker() {
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      console.log('Service Worker Registered:', reg);
+    } catch (e) {
+      console.warn('Service Worker registration failed:', e);
+    }
+  }
+}
+
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert("This browser does not support desktop notifications.");
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (permission === "granted") {
+    $("enableNotifBtn").style.display = "none";
+    showSystemNotification("Pixel Friends", "System & background alerts are active!");
+  }
+}
+
+function showSystemNotification(title, body) {
+  if (Notification.permission === "granted") {
+    navigator.serviceWorker?.ready.then(reg => {
+      reg.showNotification(title, { body, icon: '/icon.png', badge: '/badge.png' });
+    }).catch(() => {
+      new Notification(title, { body });
+    });
+  }
+}
+
+$("enableNotifBtn").onclick = requestNotificationPermission;
+
 function buildNav(){
   for(const host of [$("sideNav"),$("mobileNav")]){
     if(!host) continue;
@@ -252,6 +287,7 @@ function openApp(){
  $("auth").classList.add("hidden"); $("app").style.display="block";
  $("sideName").textContent=displayName(); $("welcome").textContent=`Welcome, ${displayName()}.`;
  $("profileName").textContent=displayName(); $("profileEmail").textContent=user?.email||"Demo";
+ if(Notification.permission === "granted") $("enableNotifBtn").style.display = "none";
  fetchPosts(); fetchMessages(); fetchNotifications();
  showPage("home");
 }
@@ -444,12 +480,16 @@ function setupRealtimeSubscriptions() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
       posts.unshift(payload.new);
       renderFeed();
+      showSystemNotification("New Post Alert", `${payload.new.author_name} posted something new.`);
     }).subscribe();
 
   sb.channel('public:messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
       messages.push(payload.new);
       renderChat();
+      if(payload.new.sender_id !== user?.id) {
+        showSystemNotification(`Message from ${payload.new.sender_name}`, payload.new.content);
+      }
     }).subscribe();
 
   sb.channel('public:notifications')
@@ -464,6 +504,7 @@ function setupRealtimeSubscriptions() {
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 buildNav();
+registerServiceWorker();
 initSupabase();
 
 (async()=>{

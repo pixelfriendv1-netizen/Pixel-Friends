@@ -464,7 +464,6 @@ async function handleLike(postId) {
       await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
     } else {
       await sb.from('likes').insert([{ post_id: postId, user_id: user.id }]);
-      // Note: If testing with your own account on your own post, remove "post.user_id !== user.id" if you want to receive notifications yourself!
       if (true) { 
         await sb.from('notifications').insert([{
           user_id: post.user_id,
@@ -609,7 +608,11 @@ async function loadNotifications() {
   }
 
   updateNotificationBadge(0);
-  await sb.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+  
+  await sb.from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', user.id)
+    .eq('is_read', false);
 
   container.innerHTML = data.map(n => `
     <div class="notification-item" onclick="handleNotificationClick('${esc(n.type || 'general')}', '${esc(n.target_id || '')}')">

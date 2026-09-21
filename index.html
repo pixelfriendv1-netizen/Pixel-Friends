@@ -138,7 +138,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <section class="page active" id="home">
   <div class="hero">
     <h1 id="welcome">Welcome, Pixel Friend.</h1>
-    <p>Real-time community with background OS popups when minimized.</p>
+    <p>Real-time community active across global feed, direct chat, and system notifications.</p>
   </div>
   <div class="grid">
     <div>
@@ -190,7 +190,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <section class="page" id="friends"><h2 class="page-title">Friends</h2><div class="card"><div class="empty">Friends system active.</div></div></section>
 <section class="page" id="playlist"><h2 class="page-title">Playlist</h2><div class="card"><div class="empty">Audio storage active.</div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
-<section class="page" id="settings"><h2 class="page-title">Settings</h2><div class="card"><div class="stat"><span>Realtime Engine</span><b>Supabase WebSockets</b></div></div></section>
+<section class="page" id="settings"><h2 class="page-title">Settings</h2><div class="card"><div class="stat"><span>Realtime Engine</span><b>Supabase WebSockets & Push API</b></div></div></section>
 </main>
 </div>
 <nav class="mobile-nav" id="mobileNav"></nav>
@@ -199,6 +199,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <script>
 const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
 const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
+const VAPID_PUBLIC_KEY = 'BKOHk7vMzEGb-SmM73Z-X9twiBWJckX86mq4oTkqeHVsy8UgyjRIWtnPX6aPBorvCwvKiginsbja1OcaZy5HYIo';
+
 let sb=null, mode="cloud", user=null;
 let posts=[], messages=[], notifications=[];
 let unreadNotifs = 0;
@@ -221,7 +223,7 @@ function initSupabase(){
   }catch(e){ sb = null; }
 }
 
-/* Service Worker & Browser Desktop Notifications */
+/* Service Worker & Browser Web Push Registration */
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator && 'PushManager' in window) {
     try {
@@ -233,6 +235,44 @@ async function registerServiceWorker() {
   }
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function subscribeUserToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!sb || !user || mode !== 'cloud') return;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+
+    // Upsert subscription to database
+    await sb.from('push_subscriptions').upsert({
+      user_id: user.id,
+      subscription: subscription.toJSON()
+    }, { onConflict: 'user_id' });
+
+    console.log('Background push subscription active!');
+  } catch (err) {
+    console.error('Failed to subscribe to Web Push:', err);
+  }
+}
+
 async function requestNotificationPermission() {
   if (!("Notification" in window)) {
     alert("This browser does not support desktop notifications.");
@@ -241,6 +281,7 @@ async function requestNotificationPermission() {
   const permission = await Notification.requestPermission();
   if (permission === "granted") {
     $("enableNotifBtn").style.display = "none";
+    subscribeUserToPush();
     showSystemNotification("Pixel Friends", "System & background alerts are active!");
   }
 }
@@ -287,7 +328,10 @@ function openApp(){
  $("auth").classList.add("hidden"); $("app").style.display="block";
  $("sideName").textContent=displayName(); $("welcome").textContent=`Welcome, ${displayName()}.`;
  $("profileName").textContent=displayName(); $("profileEmail").textContent=user?.email||"Demo";
- if(Notification.permission === "granted") $("enableNotifBtn").style.display = "none";
+ if(Notification.permission === "granted") {
+   $("enableNotifBtn").style.display = "none";
+   subscribeUserToPush();
+ }
  fetchPosts(); fetchMessages(); fetchNotifications();
  showPage("home");
 }
@@ -480,14 +524,16 @@ function setupRealtimeSubscriptions() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
       posts.unshift(payload.new);
       renderFeed();
-      showSystemNotification("New Post Alert", `${payload.new.author_name} posted something new.`);
+      if (payload.new.user_id !== user?.id) {
+        showSystemNotification("New Post Alert", `${payload.new.author_name} posted something new.`);
+      }
     }).subscribe();
 
   sb.channel('public:messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
       messages.push(payload.new);
       renderChat();
-      if(payload.new.sender_id !== user?.id) {
+      if (payload.new.sender_id !== user?.id) {
         showSystemNotification(`Message from ${payload.new.sender_name}`, payload.new.content);
       }
     }).subscribe();

@@ -16,10 +16,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}.demo-note{margin-top:16px;padding:11px;border:1px dashed #28506a;border-radius:9px;color:#7896a8;font-size:12px}
 #app{display:none;min-height:100vh}
 
-/* Shell Layout - Single column so content expands fully when side menu is hidden */
 .shell{display:block;min-height:100vh}
 
-/* Left Menu Sidebar - Hidden off-screen by default */
 .side{
   border-right:1px solid var(--line);
   background:#040a10f8;
@@ -48,7 +46,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .profile-mini{padding:12px;border:1px solid var(--line);border-radius:10px;background:#08131d;margin-bottom:8px}
 .profile-mini b{display:block}
 
-/* Header & Content Styling */
 .main{min-width:0}
 .top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 22px;background:#050b11dd;position:sticky;top:0;z-index:5}
 .top .search{max-width:420px}
@@ -95,7 +92,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .page-sub{color:var(--muted);margin:0 0 20px}
 .mobile-nav{display:none}
 
-/* Backdrop when menu is shown */
 .drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
 .drawer-backdrop.active{display:block}
 
@@ -185,7 +181,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
           <button class="primary" style="width:auto" id="postBtn">POST</button>
         </div>
       </div>
-      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div></div></div>
+      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">Loading posts...</div></div></div>
     </div>
     <div>
       <div class="card"><h3>Online friends</h3><div class="list"><div class="empty">No friends online yet.</div></div></div>
@@ -207,7 +203,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
 const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
 let sb=null, mode="cloud", user=null, posts=[];
-let currentMedia = null;
+let currentMediaFile = null, currentMediaType = null, mediaPreviewSrc = null;
 
 const navItems=[
  ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
@@ -217,15 +213,18 @@ const navItems=[
 
 function $(id){return document.getElementById(id)}
 
-/* Refresh page function attached to the brand icon/title */
-function refreshApp(){
-  window.location.reload();
-}
-
+function refreshApp(){ window.location.reload(); }
 $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = refreshApp;
 
-function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
+function initSupabase(){
+  try{
+    if(window.supabase?.createClient) {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      subscribeToPosts();
+    }
+  }catch(e){ sb = null; }
+}
 
 function buildNav(){
   for(const host of [$("sideNav"),$("mobileNav")]){
@@ -238,7 +237,6 @@ function buildNav(){
   }
 }
 
-/* Hide & Show Side Drawer Functions */
 function toggleMenu(){
   const side = $("sideDrawer");
   const backdrop = $("drawerBackdrop");
@@ -271,7 +269,8 @@ function openApp(){
  $("welcome").textContent=`Welcome, ${displayName()}.`;
  $("profileName").textContent=displayName();$("profileEmail").textContent=user?.email||"Demo account";
  $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();$("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
- renderFeed();showPage("home");
+ fetchPosts();
+ showPage("home");
 }
 
 function closeApp(){ $("app").style.display="none";$("auth").classList.remove("hidden"); }
@@ -314,13 +313,14 @@ $("drawerBackdrop").onclick=closeMenu;
 /* File & Clipboard Handling */
 function setMediaFile(file) {
   if (!file) return;
+  currentMediaFile = file;
+  if (file.type.startsWith('video/')) currentMediaType = 'video';
+  else if (file.type.startsWith('audio/')) currentMediaType = 'audio';
+  else currentMediaType = 'image';
+
   const reader = new FileReader();
   reader.onload = (e) => {
-    let type = 'image';
-    if (file.type.startsWith('video/')) type = 'video';
-    else if (file.type.startsWith('audio/')) type = 'audio';
-    
-    currentMedia = { type, src: e.target.result };
+    mediaPreviewSrc = e.target.result;
     renderMediaPreview();
   };
   reader.readAsDataURL(file);
@@ -328,18 +328,14 @@ function setMediaFile(file) {
 
 function renderMediaPreview() {
   const container = $("mediaPreview");
-  if (!currentMedia) {
+  if (!mediaPreviewSrc) {
     container.innerHTML = "";
     return;
   }
   let mediaHtml = "";
-  if (currentMedia.type === 'image') {
-    mediaHtml = `<img src="${currentMedia.src}">`;
-  } else if (currentMedia.type === 'video') {
-    mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
-  } else if (currentMedia.type === 'audio') {
-    mediaHtml = `<audio src="${currentMedia.src}" controls></audio>`;
-  }
+  if (currentMediaType === 'image') mediaHtml = `<img src="${mediaPreviewSrc}">`;
+  else if (currentMediaType === 'video') mediaHtml = `<video src="${mediaPreviewSrc}" controls></video>`;
+  else if (currentMediaType === 'audio') mediaHtml = `<audio src="${mediaPreviewSrc}" controls></audio>`;
   
   container.innerHTML = `
     <div class="preview-item">
@@ -350,7 +346,9 @@ function renderMediaPreview() {
 }
 
 function removeMedia() {
-  currentMedia = null;
+  currentMediaFile = null;
+  currentMediaType = null;
+  mediaPreviewSrc = null;
   renderMediaPreview();
 }
 
@@ -376,38 +374,94 @@ $("mediaInput").onchange = (e) => {
   }
 };
 
-/* Create Post */
-$("postBtn").onclick=()=>{
- const text=$("postText").value.trim();
- if(!text && !currentMedia) return;
- 
- posts.unshift({
-   id: Date.now(),
-   name: displayName(),
+/* Supabase Feed Operations */
+async function uploadMediaToSupabase(file) {
+  if(!sb || mode !== "cloud") return null;
+  const ext = file.name ? file.name.split('.').pop() : 'png';
+  const filePath = `${Date.now()}_${Math.random().toString(36).substring(2)}.${ext}`;
+  const { data, error } = await sb.storage.from('post-media').upload(filePath, file);
+  if(error) {
+    console.error('Storage upload error:', error);
+    return null;
+  }
+  const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+}
+
+$("postBtn").onclick = async () => {
+ const text = $("postText").value.trim();
+ if(!text && !currentMediaFile) return;
+
+ $("postBtn").disabled = true;
+ $("postBtn").textContent = "POSTING...";
+
+ let mediaUrl = null;
+ if (currentMediaFile && mode === "cloud" && sb) {
+   mediaUrl = await uploadMediaToSupabase(currentMediaFile);
+ } else if (mediaPreviewSrc) {
+   mediaUrl = mediaPreviewSrc; // fallback for demo mode
+ }
+
+ const newPost = {
+   author_name: displayName(),
    text: text,
-   media: currentMedia ? { ...currentMedia } : null,
-   created: new Date()
- });
- 
+   media_url: mediaUrl,
+   media_type: currentMediaType,
+   created_at: new Date().toISOString()
+ };
+
+ if (mode === "cloud" && sb) {
+   newPost.user_id = user?.id;
+   const { error } = await sb.from('posts').insert([newPost]);
+   if (error) console.error("Database insert error:", error);
+ } else {
+   posts.unshift(newPost);
+   renderFeed();
+ }
+
  $("postText").value = "";
- currentMedia = null;
- renderMediaPreview();
- renderFeed();
+ removeMedia();
+ $("postBtn").disabled = false;
+ $("postBtn").textContent = "POST";
 };
 
+async function fetchPosts() {
+  if (mode === "cloud" && sb) {
+    const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+      posts = data;
+    }
+  }
+  renderFeed();
+}
+
+function subscribeToPosts() {
+  if (!sb) return;
+  sb.channel('public:posts')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
+      posts.unshift(payload.new);
+      renderFeed();
+    })
+    .subscribe();
+}
+
 function renderFeed(){
- const f=$("feed");if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
+ const f=$("feed");
+ if(!posts.length){
+   f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';
+   return;
+ }
  f.innerHTML=posts.map(p=>{
    let mediaHtml = '';
-   if(p.media){
-     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
-     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
-     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
+   if(p.media_url){
+     if(p.media_type==='image') mediaHtml = `<div class="post-media"><img src="${p.media_url}"></div>`;
+     else if(p.media_type==='video') mediaHtml = `<div class="post-media"><video src="${p.media_url}" controls></video></div>`;
+     else if(p.media_type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media_url}" controls></audio></div>`;
    }
    return `<article class="post">
      <div class="post-head">
-       <div class="avatar">${esc(p.name.slice(0,2).toUpperCase())}</div>
-       <div><b>${esc(p.name)}</b><div class="muted">Just now</div></div>
+       <div class="avatar">${esc((p.author_name||'PF').slice(0,2).toUpperCase())}</div>
+       <div><b>${esc(p.author_name||'Pixel Friend')}</b><div class="muted">${new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div>
      </div>
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}
@@ -416,12 +470,26 @@ function renderFeed(){
        <button class="secondary">▢ Comment</button>
      </div>
    </article>`;
- }).join("")
+ }).join("");
 }
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
-buildNav();initSupabase();
-(async()=>{if(sb){try{const {data}=await sb.auth.getSession();if(data.session){user=data.session.user;mode="cloud";openApp()}}catch(e){}}})();
+buildNav();
+initSupabase();
+
+(async()=>{
+  if(sb){
+    try{
+      const {data}=await sb.auth.getSession();
+      if(data.session){
+        user=data.session.user;
+        mode="cloud";
+        openApp();
+      }
+    }catch(e){}
+  }
+})();
 </script>
-</body></html>
+</body>
+</html>

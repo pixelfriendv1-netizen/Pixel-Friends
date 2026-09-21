@@ -501,7 +501,7 @@ async function handleAddComment(postId, event) {
       post_id: postId,
       user_id: user.id,
       user_name: displayName(),
-      text: text
+      content: text
     }]);
 
     if (error) {
@@ -523,7 +523,7 @@ async function handleAddComment(postId, event) {
     input.value = '';
     loadPosts();
   } else {
-    const newComment = { user_name: displayName(), text, created_at: new Date().toISOString() };
+    const newComment = { user_name: displayName(), content: text, created_at: new Date().toISOString() };
     if (!post.comments) post.comments = [];
     post.comments.push(newComment);
     input.value = '';
@@ -560,7 +560,7 @@ function renderFeed(){
      <div class="comments-box">
        <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (${comments.length})</div>
        <div style="display:grid;gap:5px;margin-bottom:8px">
-         ${comments.map(c=>`<div class="comment-item"><b>${esc(c.user_name)}:</b>${esc(c.text)}</div>`).join('')}
+         ${comments.map(c=>`<div class="comment-item"><b>${esc(c.user_name)}:</b>${esc(c.content || c.text)}</div>`).join('')}
        </div>
        <form onsubmit="handleAddComment('${p.id}', event)" style="display:flex;gap:5px">
          <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none">

@@ -463,19 +463,119 @@ function renderFeed(){
      else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
      else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
    }
-   return `<article class="post">
+   return `<article class="post" data-post-id="${p.id}">
      <div class="post-head">
        <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
        <div><b>${esc(name)}</b><div class="muted">Just now</div></div>
      </div>
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}
-     <div class="row" style="margin-top:10px">
-       <button class="secondary">♡ Like</button>
-       <button class="secondary">▢ Comment</button>
+     
+     <!-- Interaction Buttons -->
+     <div class="row" style="margin-top:10px; gap: 12px;">
+       <button class="secondary" onclick="toggleLike('${p.id}')">❤️ <span id="like-count-${p.id}">0</span></button>
+     </div>
+
+     <!-- Comments Section -->
+     <div class="comments-section" style="margin-top: 12px; border-top: 1px solid #173344; padding-top: 10px;">
+       <div id="comments-list-${p.id}" class="comments-list" style="display: grid; gap: 6px; margin-bottom: 8px; font-size: 13px;">
+         <!-- Comments load here -->
+       </div>
+       <form onsubmit="handleCommentSubmit(event, '${p.id}')" class="comment-form" style="display: flex; gap: 6px;">
+         <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." required style="flex:1; background:#03080d; border:1px solid #183647; color:var(--text); border-radius:6px; padding:8px; outline:none;" />
+         <button type="submit" class="secondary" style="padding: 8px 12px;">Post</button>
+       </form>
      </div>
    </article>`;
- }).join("")
+ }).join("");
+
+ posts.forEach(p => loadPostInteractions(p.id));
+}
+
+// Load likes count and comments for a specific post
+async function loadPostInteractions(postId) {
+  if (mode !== "cloud" || !sb) return;
+
+  const { count: likeCount } = await sb
+    .from('likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('post_id', postId);
+
+  const likeCountElem = document.getElementById(`like-count-${postId}`);
+  if (likeCountElem) likeCountElem.innerText = likeCount || 0;
+
+  const { data: comments } = await sb
+    .from('comments')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+
+  const commentsList = document.getElementById(`comments-list-${postId}`);
+  if (commentsList && comments) {
+    commentsList.innerHTML = comments.map(c => `
+      <div class="comment-item">
+        <strong>${esc(c.user_name)}:</strong> ${esc(c.content)}
+      </div>
+    `).join('');
+  }
+}
+
+// Toggle Like
+async function toggleLike(postId) {
+  if (mode !== "cloud" || !sb) {
+    alert("Likes require cloud mode.");
+    return;
+  }
+  if (!user) {
+    alert("You must be logged in to like posts!");
+    return;
+  }
+
+  const { data: existingLike } = await sb
+    .from('likes')
+    .select('id')
+    .eq('post_id', postId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (existingLike) {
+    await sb.from('likes').delete().eq('id', existingLike.id);
+  } else {
+    await sb.from('likes').insert({ post_id: postId, user_id: user.id });
+  }
+
+  loadPostInteractions(postId);
+}
+
+// Handle Comment Submission
+async function handleCommentSubmit(event, postId) {
+  event.preventDefault();
+  if (mode !== "cloud" || !sb) {
+    alert("Comments require cloud mode.");
+    return;
+  }
+  if (!user) {
+    alert("You must be logged in to comment!");
+    return;
+  }
+
+  const inputElem = document.getElementById(`comment-input-${postId}`);
+  const content = inputElem.value.trim();
+  if (!content) return;
+
+  const { error } = await sb.from('comments').insert({
+    post_id: postId,
+    user_id: user.id,
+    user_name: displayName(),
+    content: content
+  });
+
+  if (error) {
+    alert("Failed to post comment: " + error.message);
+  } else {
+    inputElem.value = '';
+    loadPostInteractions(postId);
+  }
 }
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}

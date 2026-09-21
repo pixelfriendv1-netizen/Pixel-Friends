@@ -11,35 +11,16 @@
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#09253a55,transparent 35%),linear-gradient(135deg,#02050a,#06101a 55%,#03070d);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif;min-height:100vh}
 button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 #auth{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-box{width:min(460px,100%);background:#061019ee;border:1px solid #1b4357;border-radius:18px;padding:30px;box-shadow:0 0 70px #00d9ff18}
-.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px}.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
+.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px;position:relative}
+.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
+.nav-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border-radius:50%;padding:2px 6px;font-size:10px;font-weight:bold;z-index:10;box-shadow:0 0 10px var(--danger)}
 .field{margin:12px 0}.field label{display:block;color:#9eb7c8;font-size:12px;margin-bottom:6px}.field input,.composer textarea,.search{width:100%;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:9px;padding:12px;outline:none}.field input:focus,.composer textarea:focus,.search:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #39e7ff15}
-.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}.demo-note{margin-top:16px;padding:11px;border:1px dashed #28506a;border-radius:9px;color:#7896a8;font-size:12px}
+.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}
 #app{display:none;min-height:100vh}
 
-/* Shell Layout - Single column so content expands fully when side menu is hidden */
 .shell{display:block;min-height:100vh}
-
-/* Left Menu Sidebar - Hidden off-screen by default */
-.side{
-  border-right:1px solid var(--line);
-  background:#040a10f8;
-  padding:22px 14px;
-  position:fixed;
-  top:0;
-  left:0;
-  bottom:0;
-  width:270px;
-  z-index:30;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  transform:translateX(-100%);
-  transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:5px 0 35px rgba(0,0,0,0.8);
-}
-.side.open{
-  transform:translateX(0);
-}
+.side{border-right:1px solid var(--line);background:#040a10f8;padding:22px 14px;position:fixed;top:0;left:0;bottom:0;width:270px;z-index:30;display:flex;flex-direction:column;justify-content:space-between;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:5px 0 35px rgba(0,0,0,0.8)}
+.side.open{transform:translateX(0)}
 .side .logo{font-size:20px;padding:0 10px 25px;cursor:pointer}
 .nav{display:grid;gap:7px}
 .nav button{text-align:left;border-color:transparent}
@@ -48,7 +29,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .profile-mini{padding:12px;border:1px solid var(--line);border-radius:10px;background:#08131d;margin-bottom:8px}
 .profile-mini b{display:block}
 
-/* Header & Content Styling */
 .main{min-width:0}
 .top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 22px;background:#050b11dd;position:sticky;top:0;z-index:5}
 .top .search{max-width:420px}
@@ -58,13 +38,19 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .brand-icon{width:38px;height:38px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);box-shadow:0 0 16px #39e7ff33;font-size:17px}
 .brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
 .brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
-.profile-btn{display:flex;align-items:center;gap:9px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
+
+/* Separate Bell & Profile Button Styles */
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
+.bell-btn:hover { border-color: var(--cyan); }
+.profile-btn{display:flex;align-items:center;gap:8px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
+.profile-btn:hover{border-color:var(--cyan)}
 .profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:900}
+
 .page{display:none;padding:26px;max-width:1300px;margin:auto}
 .page.active{display:block}
 .hero{border:1px solid #1d4b60;border-radius:18px;padding:28px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22);position:relative;overflow:hidden}
 .hero:after{content:"";position:absolute;right:-80px;top:-80px;width:240px;height:240px;border:1px solid #39e7ff44;border-radius:50%;box-shadow:0 0 50px #39e7ff16}
-.eyebrow{color:var(--cyan);font-size:11px;letter-spacing:3px;font-weight:800}
 .hero h1{font-size:clamp(28px,4vw,48px);margin:8px 0}
 .hero p{color:#8ea9b9;max-width:650px}
 .grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
@@ -84,22 +70,12 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center}
 .post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
 .post-media audio{width:100%;margin-top:10px}
-.tag{display:inline-block;color:var(--cyan);background:#0b2530;border:1px solid #174a5c;padding:3px 7px;border-radius:20px;font-size:11px}
-.stat{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #112532}
-.stat:last-child{border:0}
 .empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
 .list{display:grid;gap:9px}
-.person{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #153040;border-radius:9px}
-.person .spacer{flex:1}
 .page-title{font-size:28px;margin:0 0 5px}
 .page-sub{color:var(--muted);margin:0 0 20px}
 .mobile-nav{display:none}
 
-/* Push notification action panel */
-.push-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0a1e2b;border:1px solid #1e4a61;padding:14px;border-radius:10px;margin-bottom:18px}
-.push-banner button{padding:8px 16px;background:var(--cyan);color:#03080d;border:0;font-weight:bold;border-radius:6px;cursor:pointer}
-
-/* Chat Layout Styles */
 .chat-container{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:450px}
 .chat-users{border-right:1px solid var(--line);padding-right:14px;overflow-y:auto;max-height:500px}
 .chat-user-item{padding:10px;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#08131c;border:1px solid #153040}
@@ -115,7 +91,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   .chat-users{max-height:150px;border-right:none;border-bottom:1px solid var(--line);padding-bottom:10px}
 }
 
-/* Backdrop when menu is shown */
 .drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
 .drawer-backdrop.active{display:block}
 
@@ -175,30 +150,29 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
     </div>
   </div>
   <div class="spacer"></div>
-  <button class="profile-btn" id="topProfile" aria-label="Profile">
-    <span class="profile-avatar" id="topAvatar">PF</span>
-    <span>Profile</span>
-  </button>
+  
+  <div class="header-actions">
+    <!-- Separate Notification Bell Button -->
+    <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications">
+      <span style="font-size: 16px;">🔔</span>
+    </button>
+
+    <!-- Separate Profile Button -->
+    <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
+      <span class="profile-avatar" id="topAvatar">PF</span>
+      <span>Profile</span>
+    </button>
+  </div>
 </header>
 
 <section class="page active" id="home">
   <div class="hero">
     <h1 id="welcome">Welcome, Pixel Friend.</h1>
     <p>A clean, independent social space built for profiles, friends, posts, messages, and audio playlist.</p>
-    <div class="row"></div>
   </div>
 
   <div class="grid">
     <div>
-      <!-- Push Notifications Toggle Banner -->
-      <div class="push-banner">
-        <div>
-          <b>Push Notifications</b>
-          <div class="muted" id="pushStatus">Enable background alerts for new activity.</div>
-        </div>
-        <button id="enablePushBtn">Enable</button>
-      </div>
-
       <div class="card composer">
         <h3>Share something</h3>
         <textarea id="postText" placeholder="📋 Paste text, 🖼️ screenshots, or copied pictures directly here (Ctrl+V) and video and audio"></textarea>
@@ -247,10 +221,15 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   </div>
 </section>
 
-<section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Mentions, reactions and friend activity.</p><div class="card"><div class="empty">You're all caught up.</div></div></section>
+<section class="page" id="notifications">
+  <h2 class="page-title">Notifications</h2>
+  <p class="page-sub">Mentions, reactions and new feed activity.</p>
+  <div class="card"><div class="empty">You're all caught up.</div></div>
+</section>
+
 <section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Your personal music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Your Pixel Friends identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div><hr style="border-color:#142a38;margin:18px 0"><p class="muted">Your profile starts clean. Add your own bio, avatar and interests when profile editing is connected.</p></div></section>
-<section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Control your Pixel Friends experience.</p><div class="card"><div class="stat"><span>Theme</span><b>Cyber</b></div><div class="stat"><span>Data source</span><b>Pixel Friends</b></div><div class="stat"><span>Sample data</span><b>Not imported</b></div></div></section>
+<section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Control your Pixel Friends experience.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Data source</span><b>Pixel Friends</b></div></div></section>
 </main></div>
 <nav class="mobile-nav" id="mobileNav"></nav>
 </div>
@@ -258,12 +237,12 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <script>
 const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
 const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
-const VAPID_PUBLIC_KEY="BIVFWH78Xnr9zCgQkvsSB2lXmWDt2Tf-rRa1WRNSyQQfhZRXL16f2MPmwKNAeaj29gREr5R_WxSG20IIvmaQAnI";
 
 let sb=null, mode="cloud", user=null, posts=[];
 let currentMedia = null;
 let activeRecipient = null;
 let chatSubscription = null;
+let notificationSubscription = null;
 
 const navItems=[
  ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
@@ -272,10 +251,7 @@ const navItems=[
 ];
 
 function $(id){return document.getElementById(id)}
-
-function refreshApp(){
-  window.location.reload();
-}
+function refreshApp(){window.location.reload()}
 
 $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = refreshApp;
@@ -289,28 +265,22 @@ function buildNav(){
     host.querySelectorAll("button").forEach(b=>b.onclick=()=>{
       showPage(b.dataset.page);
       if(b.dataset.page === 'messages') loadChatUsers();
-      if(b.dataset.page === 'notifications') loadNotifications();
+      if(b.dataset.page === 'notifications') {
+        loadNotifications();
+      }
       closeMenu();
     });
   }
 }
 
 function toggleMenu(){
-  const side = $("sideDrawer");
-  const backdrop = $("drawerBackdrop");
-  if(side && backdrop){
-    side.classList.toggle("open");
-    backdrop.classList.toggle("active");
-  }
+  $("sideDrawer")?.classList.toggle("open");
+  $("drawerBackdrop")?.classList.toggle("active");
 }
 
 function closeMenu(){
-  const side = $("sideDrawer");
-  const backdrop = $("drawerBackdrop");
-  if(side && backdrop){
-    side.classList.remove("open");
-    backdrop.classList.remove("active");
-  }
+  $("sideDrawer")?.classList.remove("open");
+  $("drawerBackdrop")?.classList.remove("active");
 }
 
 function showPage(id){
@@ -330,8 +300,9 @@ function openApp(){
  
  loadPosts();
  subscribeToPosts();
+ loadNotificationsCount(); 
+ subscribeToNotifications();
  showPage("home");
- checkPushSubscription();
 }
 
 function closeApp(){ $("app").style.display="none";$("auth").classList.remove("hidden"); }
@@ -367,7 +338,18 @@ $("logout").onclick=async()=>{
   closeApp();
 };
 
-$("topProfile").onclick=()=>{showPage("profile");closeMenu()};
+/* Button Click Handlers */
+$("topBell").onclick = () => {
+  showPage("notifications");
+  loadNotifications();
+  closeMenu();
+};
+
+$("topProfile").onclick = () => {
+  showPage("profile");
+  closeMenu();
+};
+
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
 
@@ -393,102 +375,68 @@ function renderMediaPreview() {
     return;
   }
   let mediaHtml = "";
-  if (currentMedia.type === 'image') {
-    mediaHtml = `<img src="${currentMedia.src}">`;
-  } else if (currentMedia.type === 'video') {
-    mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
-  } else if (currentMedia.type === 'audio') {
-    mediaHtml = `<audio src="${currentMedia.src}" controls></audio>`;
-  }
+  if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}">`;
+  else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
+  else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls></audio>`;
   
-  container.innerHTML = `
-    <div class="preview-item">
-      ${mediaHtml}
-      <button class="remove-btn" onclick="removeMedia()">✕</button>
-    </div>
-  `;
+  container.innerHTML = `<div class="preview-item">${mediaHtml}<button class="remove-btn" onclick="removeMedia()">✕</button></div>`;
 }
 
-function removeMedia() {
-  currentMedia = null;
-  renderMediaPreview();
-}
+function removeMedia() { currentMedia = null; renderMediaPreview(); }
 
-/* Handle Paste Event (Ctrl+V) */
 $("postText").addEventListener("paste", (e) => {
   const items = (e.clipboardData || e.originalEvent.clipboardData).items;
   for (let item of items) {
-    if (item.kind === 'file') {
-      const blob = item.getAsFile();
-      setMediaFile(blob);
-    }
+    if (item.kind === 'file') setMediaFile(item.getAsFile());
   }
 });
 
-/* Trigger File Inputs */
 $("uploadImgBtn").onclick = () => { $("mediaInput").accept = "image/*"; $("mediaInput").click(); };
 $("uploadVidBtn").onclick = () => { $("mediaInput").accept = "video/*"; $("mediaInput").click(); };
 $("uploadAudBtn").onclick = () => { $("mediaInput").accept = "audio/*"; $("mediaInput").click(); };
+$("mediaInput").onchange = (e) => { if (e.target.files && e.target.files[0]) setMediaFile(e.target.files[0]); };
 
-$("mediaInput").onchange = (e) => {
-  if (e.target.files && e.target.files[0]) {
-    setMediaFile(e.target.files[0]);
-  }
-};
-
-/* Create Post - Saves to Supabase to trigger Edge Function Webhook */
 $("postBtn").onclick = async () => {
   const text = $("postText").value.trim();
   if (!text && !currentMedia) return;
 
-  const newPost = {
-    user_id: user?.id,
-    user_name: displayName(),
-    text: text || null,
-    media: currentMedia ? { ...currentMedia } : null
-  };
-
+  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null };
   if (mode === "cloud" && sb) {
     const { error } = await sb.from('posts').insert([newPost]);
-    if (error) {
-      alert("Failed to create post: " + error.message);
-      return;
-    }
+    if (error) { alert("Failed to create post: " + error.message); return; }
   } else {
     posts.unshift({ ...newPost, created_at: new Date().toISOString() });
     renderFeed();
   }
-
   $("postText").value = "";
   currentMedia = null;
   renderMediaPreview();
 };
 
-/* Load Posts from Supabase */
 async function loadPosts() {
   if (mode === "cloud" && sb) {
-    const { data, error } = await sb
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (!error && data) {
-      posts = data;
-      renderFeed();
-    }
+    const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
+    if (!error && data) { posts = data; renderFeed(); }
   } else {
     renderFeed();
   }
 }
 
-/* Real-time listener for incoming posts */
 function subscribeToPosts() {
   if (mode === "cloud" && sb) {
     sb.channel('public:posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
         posts.unshift(payload.new);
         renderFeed();
+
+        if (payload.new.user_id !== user?.id) {
+          await sb.from('notifications').insert([{
+            user_id: user.id,
+            title: 'New Feed Activity',
+            message: `${payload.new.user_name || 'A friend'} shared a new post.`,
+            is_read: false
+          }]);
+        }
       })
       .subscribe();
   }
@@ -511,104 +459,87 @@ function renderFeed(){
      </div>
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}
-     
-     <div class="row" style="margin-top:10px; gap: 12px;">
-       <button class="secondary" onclick="toggleLike('${p.id}')">❤️ <span id="like-count-${p.id}">0</span></button>
-     </div>
-
-     <div class="comments-section" style="margin-top: 12px; border-top: 1px solid #173344; padding-top: 10px;">
-       <div id="comments-list-${p.id}" class="comments-list" style="display: grid; gap: 6px; margin-bottom: 8px; font-size: 13px;"></div>
-       <form onsubmit="handleCommentSubmit(event, '${p.id}')" class="comment-form" style="display: flex; gap: 6px;">
-         <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." required style="flex:1; background:#03080d; border:1px solid #183647; color:var(--text); border-radius:6px; padding:8px; outline:none;" />
-         <button type="submit" class="secondary" style="padding: 8px 12px;">Post</button>
-       </form>
-     </div>
    </article>`;
  }).join("");
-
- posts.forEach(p => loadPostInteractions(p.id));
 }
 
-async function loadPostInteractions(postId) {
-  if (mode !== "cloud" || !sb) return;
-
-  const { count: likeCount } = await sb
-    .from('likes')
+/* --- Notifications & Unread Badge Counter Logic (Attached to Bell Button) --- */
+async function loadNotificationsCount() {
+  if (mode !== "cloud" || !sb || !user) return;
+  const { count, error } = await sb
+    .from('notifications')
     .select('*', { count: 'exact', head: true })
-    .eq('post_id', postId);
-
-  const likeCountElem = document.getElementById(`like-count-${postId}`);
-  if (likeCountElem) likeCountElem.innerText = likeCount || 0;
-
-  const { data: comments } = await sb
-    .from('comments')
-    .select('*')
-    .eq('post_id', postId)
-    .order('created_at', { ascending: true });
-
-  const commentsList = document.getElementById(`comments-list-${postId}`);
-  if (commentsList && comments) {
-    commentsList.innerHTML = comments.map(c => `
-      <div class="comment-item">
-        <strong>${esc(c.user_name)}:</strong> ${esc(c.content)}
-      </div>
-    `).join('');
-  }
-}
-
-async function toggleLike(postId) {
-  if (mode !== "cloud" || !sb) {
-    alert("Likes require cloud mode.");
-    return;
-  }
-  if (!user) {
-    alert("You must be logged in to like posts!");
-    return;
-  }
-
-  const { data: existingLike } = await sb
-    .from('likes')
-    .select('id')
-    .eq('post_id', postId)
     .eq('user_id', user.id)
-    .single();
+    .eq('is_read', false);
 
-  if (existingLike) {
-    await sb.from('likes').delete().eq('id', existingLike.id);
-  } else {
-    await sb.from('likes').insert({ post_id: postId, user_id: user.id });
+  if (!error) {
+    updateNotificationBadge(count || 0);
   }
-
-  loadPostInteractions(postId);
 }
 
-async function handleCommentSubmit(event, postId) {
-  event.preventDefault();
-  if (mode !== "cloud" || !sb) {
-    alert("Comments require cloud mode.");
+async function loadNotifications() {
+  const container = document.querySelector('#notifications .card');
+  if (!container) return;
+
+  if (mode !== "cloud" || !sb || !user) {
+    container.innerHTML = '<div class="empty">Notifications require cloud mode.</div>';
+    updateNotificationBadge(0);
     return;
   }
-  if (!user) {
-    alert("You must be logged in to comment!");
+
+  const { data, error } = await sb
+    .from('notifications')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('id', { ascending: false });
+
+  if (error || !data || data.length === 0) {
+    container.innerHTML = '<div class="empty">You\'re all caught up on messages, mentions, reactions, and feed activity.</div>';
+    updateNotificationBadge(0);
     return;
   }
 
-  const inputElem = document.getElementById(`comment-input-${postId}`);
-  const content = inputElem.value.trim();
-  if (!content) return;
+  updateNotificationBadge(0);
+  await sb.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
 
-  const { error } = await sb.from('comments').insert({
-    post_id: postId,
-    user_id: user.id,
-    user_name: displayName(),
-    content: content
-  });
+  container.innerHTML = data.map(n => `
+    <div style="padding: 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-weight: bold; color: var(--cyan);">${esc(n.title || 'Notification')}</div>
+      <div style="font-size: 13px; color: var(--text);">${esc(n.message || n.content || '')}</div>
+    </div>
+  `).join('');
+}
 
-  if (error) {
-    alert("Failed to post comment: " + error.message);
-  } else {
-    inputElem.value = '';
-    loadPostInteractions(postId);
+function updateNotificationBadge(count) {
+  const bellBtn = $("topBell"); // Badge is now on the bell button!
+  if (!bellBtn) return;
+  
+  let badge = bellBtn.querySelector('.nav-badge');
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      bellBtn.appendChild(badge);
+    }
+    badge.textContent = count;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+function subscribeToNotifications() {
+  if (notificationSubscription) sb.removeChannel(notificationSubscription);
+  if (mode === "cloud" && sb && user) {
+    notificationSubscription = sb.channel('public:notifications')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications', 
+        filter: `user_id=eq.${user.id}` 
+      }, (payload) => {
+        loadNotificationsCount();
+      })
+      .subscribe();
   }
 }
 
@@ -620,15 +551,8 @@ async function loadChatUsers() {
     return;
   }
 
-  const { data, error } = await sb
-    .from('posts')
-    .select('user_id, user_name')
-    .order('created_at', { ascending: false });
-
-  if (error || !data) {
-    usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">Failed to load users.</div>';
-    return;
-  }
+  const { data, error } = await sb.from('posts').select('user_id, user_name').order('created_at', { ascending: false });
+  if (error || !data) { usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">Failed to load users.</div>'; return; }
 
   const uniqueUsersMap = new Map();
   data.forEach(item => {
@@ -638,11 +562,7 @@ async function loadChatUsers() {
   });
 
   const uniqueUsers = Array.from(uniqueUsersMap.entries());
-
-  if (uniqueUsers.length === 0) {
-    usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">No other users found yet.</div>';
-    return;
-  }
+  if (uniqueUsers.length === 0) { usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">No other users found yet.</div>'; return; }
 
   usersListElem.innerHTML = uniqueUsers.map(([uid, name]) => `
     <div class="chat-user-item" onclick="selectChatUser('${uid}', '${esc(name)}')">
@@ -655,17 +575,14 @@ function selectChatUser(recipientId, recipientName) {
   activeRecipient = recipientId;
   $("chatHeader").textContent = `Chat with ${recipientName}`;
   $("chatForm").classList.remove("hidden");
-
   document.querySelectorAll(".chat-user-item").forEach(el => el.classList.remove("active"));
   event.currentTarget.classList.add("active");
-
   loadMessages();
   subscribeToMessages();
 }
 
 async function loadMessages() {
   if (!activeRecipient || !sb) return;
-
   const { data, error } = await sb
     .from('messages')
     .select('*')
@@ -673,54 +590,34 @@ async function loadMessages() {
     .order('created_at', { ascending: true });
 
   const messagesList = $("chatMessagesList");
-  if (error || !data || data.length === 0) {
-    messagesList.innerHTML = '<div class="empty">No messages yet. Start the conversation!</div>';
-    return;
-  }
+  if (error || !data || data.length === 0) { messagesList.innerHTML = '<div class="empty">No messages yet. Start the conversation!</div>'; return; }
 
   messagesList.innerHTML = data.map(m => {
     const isSender = m.sender_id === user.id;
     return `<div class="chat-msg ${isSender ? 'sent' : 'received'}">${esc(m.content)}</div>`;
   }).join('');
-  
   messagesList.scrollTop = messagesList.scrollHeight;
 }
 
 async function handleMessageSubmit(event) {
   event.preventDefault();
   if (!activeRecipient || !sb) return;
-
   const inputElem = $("chatInput");
   const content = inputElem.value.trim();
   if (!content) return;
 
-  const { error } = await sb.from('messages').insert({
-    sender_id: user.id,
-    recipient_id: activeRecipient,
-    content: content
-  });
-
-  if (error) {
-    alert("Failed to send message: " + error.message);
-  } else {
-    inputElem.value = '';
-    loadMessages();
-  }
+  const { error } = await sb.from('messages').insert({ sender_id: user.id, recipient_id: activeRecipient, content: content });
+  if (error) alert("Failed to send message: " + error.message);
+  else { inputElem.value = ''; loadMessages(); }
 }
 
 function subscribeToMessages() {
-  if (chatSubscription) {
-    sb.removeChannel(chatSubscription);
-  }
-
+  if (chatSubscription) sb.removeChannel(chatSubscription);
   if (sb && user) {
     chatSubscription = sb.channel('public:messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const msg = payload.new;
-        if (
-          (msg.sender_id === user.id && msg.recipient_id === activeRecipient) ||
-          (msg.sender_id === activeRecipient && msg.recipient_id === user.id)
-        ) {
+        if ((msg.sender_id === user.id && msg.recipient_id === activeRecipient) || (msg.sender_id === activeRecipient && msg.recipient_id === user.id)) {
           loadMessages();
         }
       })
@@ -728,91 +625,9 @@ function subscribeToMessages() {
   }
 }
 
-/* --- In-App Notifications Fetcher --- */
-async function loadNotifications() {
-  const container = document.querySelector('#notifications .card');
-  if (!container || mode !== "cloud" || !sb || !user) return;
-
-  const { data, error } = await sb
-    .from('notifications')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('id', { ascending: false });
-
-  if (error || !data || data.length === 0) {
-    container.innerHTML = '<div class="empty">You\'re all caught up.</div>';
-    return;
-  }
-
-  container.innerHTML = data.map(n => `
-    <div style="padding: 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;">
-      <div style="font-weight: bold; color: var(--cyan);">${esc(n.title || 'Notification')}</div>
-      <div style="font-size: 13px; color: var(--text);">${esc(n.message || n.content || '')}</div>
-    </div>
-  `).join('');
-}
-
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
-/* --- Push Notification & Service Worker Integration --- */
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-async function checkPushSubscription() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    $("pushStatus").textContent = "Push notifications are not supported by this browser.";
-    $("enablePushBtn").disabled = true;
-    return;
-  }
-  if (Notification.permission === 'granted') {
-    $("pushStatus").textContent = "Push notifications are enabled!";
-    $("enablePushBtn").textContent = "Active";
-    $("enablePushBtn").disabled = true;
-  }
-}
-
-async function registerPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  try {
-    const reg = await navigator.serviceWorker.register('/Pixel-Friends/sw.js');
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      $("pushStatus").textContent = "Notification permission was denied.";
-      return;
-    }
-
-    const subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-    });
-
-    if (sb && user?.id && mode === "cloud") {
-      await sb.from('push_subscriptions').upsert({
-        user_id: user.id,
-        subscription: subscription.toJSON()
-      });
-    }
-
-    $("pushStatus").textContent = "Push notifications are enabled!";
-    $("enablePushBtn").textContent = "Active";
-    $("enablePushBtn").disabled = true;
-  } catch (err) {
-    console.error("Push registration error:", err);
-    $("pushStatus").textContent = "Registration failed: " + err.message;
-  }
-}
-
-$("enablePushBtn").onclick = registerPush;
-
-buildNav();initSupabase();
+buildNav(); initSupabase();
 (async()=>{if(sb){try{const {data}=await sb.auth.getSession();if(data.session){user=data.session.user;mode="cloud";openApp()}}catch(e){}}})();
 </script>
 </body></html>

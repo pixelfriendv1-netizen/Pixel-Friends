@@ -39,7 +39,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
 .brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
 
-/* Separate Bell & Profile Button Styles */
+/* Header Action Styles */
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
 .bell-btn:hover { border-color: var(--cyan); }
@@ -75,6 +75,19 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .page-title{font-size:28px;margin:0 0 5px}
 .page-sub{color:var(--muted);margin:0 0 20px}
 .mobile-nav{display:none}
+
+/* Post Actions & Comments UI Styles */
+.post-actions{display:flex;gap:15px;margin-top:12px;padding-top:10px;border-top:1px solid #173344}
+.action-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;transition:background 0.2s, color 0.2s}
+.action-btn:hover{background:#0b1d28;color:var(--cyan)}
+.action-btn.liked{color:var(--pink)}
+.comments-section{margin-top:12px;padding-top:10px;border-top:1px dashed #173344;display:none}
+.comments-section.open{display:block}
+.comment-item{font-size:12px;background:#03080d;border:1px solid #153040;padding:8px 10px;border-radius:6px;margin-bottom:6px}
+.comment-item b{color:var(--cyan)}
+.comment-form{display:flex;gap:6px;margin-top:8px}
+.comment-form input{flex:1;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:6px;padding:8px;font-size:12px;outline:none}
+.comment-form input:focus{border-color:var(--cyan)}
 
 .chat-container{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:450px}
 .chat-users{border-right:1px solid var(--line);padding-right:14px;overflow-y:auto;max-height:500px}
@@ -403,7 +416,7 @@ $("postBtn").onclick = async () => {
   const text = $("postText").value.trim();
   if (!text && !currentMedia) return;
 
-  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null };
+  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null, likes: [], comments: [] };
   if (mode === "cloud" && sb) {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
@@ -443,6 +456,13 @@ function subscribeToPosts() {
           }]);
         }
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
+        const index = posts.findIndex(p => p.id === payload.new.id);
+        if (index > -1) {
+          posts[index] = payload.new;
+          renderFeed();
+        }
+      })
       .subscribe();
   }
 }
@@ -451,12 +471,24 @@ function renderFeed(){
  const f=$("feed");if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
  f.innerHTML=posts.map(p=>{
    const name = p.user_name || p.name || 'Pixel Friend';
+   const likes = p.likes || [];
+   const likesCount = likes.length;
+   const isLiked = user && likes.includes(user.id);
+   const comments = p.comments || [];
+
    let mediaHtml = '';
    if(p.media){
      if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
      else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
      else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
    }
+
+   const commentsHtml = comments.map(c => `
+     <div class="comment-item">
+       <b>${esc(c.user_name)}</b>: ${esc(c.text)}
+     </div>
+   `).join('') || '<div class="empty" style="padding:8px;font-size:11px;">No comments yet.</div>';
+
    return `<article class="post" data-post-id="${p.id || ''}">
      <div class="post-head">
        <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
@@ -464,8 +496,93 @@ function renderFeed(){
      </div>
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}
+     
+     <div class="post-actions">
+       <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${p.id}')">
+         ❤️ <span>${likesCount}</span> Like${likesCount === 1 ? '' : 's'}
+       </button>
+       <button class="action-btn" onclick="toggleCommentSection('${p.id}')">
+         💬 <span>${comments.length}</span> Comment${comments.length === 1 ? '' : 's'}
+       </button>
+     </div>
+
+     <div class="comments-section" id="comments-${p.id}">
+       <div class="comments-list">${commentsHtml}</div>
+       <div class="comment-form">
+         <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." onkeydown="if(event.key==='Enter') addComment('${p.id}')">
+         <button class="secondary" style="padding:6px 12px;font-size:12px;" onclick="addComment('${p.id}')">Send</button>
+       </div>
+     </div>
    </article>`;
  }).join("");
+}
+
+async function toggleLike(postId) {
+  if (!user) return;
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+
+  if (!post.likes) post.likes = [];
+  const index = post.likes.indexOf(user.id);
+  
+  if (index > -1) {
+    post.likes.splice(index, 1);
+  } else {
+    post.likes.push(user.id);
+    if (mode === "cloud" && sb && post.user_id && post.user_id !== user.id) {
+      await sb.from('notifications').insert([{
+        user_id: post.user_id,
+        type: 'post',
+        target_id: postId,
+        title: `New Like`,
+        message: `${displayName()} liked your post.`,
+        is_read: false
+      }]);
+    }
+  }
+
+  if (mode === "cloud" && sb) {
+    await sb.from('posts').update({ likes: post.likes }).eq('id', postId);
+  }
+  renderFeed();
+}
+
+function toggleCommentSection(postId) {
+  const section = $(`comments-${postId}`);
+  if (section) section.classList.toggle('open');
+}
+
+async function addComment(postId) {
+  if (!user) return;
+  const input = $(`comment-input-${postId}`);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+
+  if (!post.comments) post.comments = [];
+  const newComment = { user_id: user.id, user_name: displayName(), text: text, created_at: new Date().toISOString() };
+  post.comments.push(newComment);
+
+  if (mode === "cloud" && sb) {
+    await sb.from('posts').update({ comments: post.comments }).eq('id', postId);
+    
+    if (post.user_id && post.user_id !== user.id) {
+      await sb.from('notifications').insert([{
+        user_id: post.user_id,
+        type: 'post',
+        target_id: postId,
+        title: `New Comment`,
+        message: `${displayName()} commented: "${text.length > 25 ? text.slice(0, 25) + '...' : text}"`,
+        is_read: false
+      }]);
+    }
+  }
+  input.value = '';
+  renderFeed();
+  $(`comments-${postId}`)?.classList.add('open');
 }
 
 /* --- Notifications & Unread Badge Counter Logic --- */
@@ -651,13 +768,15 @@ async function handleMessageSubmit(event) {
   if (error) {
     alert("Failed to send message: " + error.message);
   } else {
-    // Dynamic notification showing the sender's name and actual message preview
+    const senderName = displayName();
+    const messagePreview = content.length > 35 ? content.slice(0, 35) + '...' : content;
+
     await sb.from('notifications').insert([{
       user_id: activeRecipient,
       type: 'message',
       target_id: user.id,
-      title: `Message from ${displayName()}`,
-      message: content.length > 35 ? content.slice(0, 35) + '...' : content,
+      title: `Message from ${senderName}`,
+      message: messagePreview,
       is_read: false
     }]);
 

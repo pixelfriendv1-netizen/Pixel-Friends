@@ -168,12 +168,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   <div class="spacer"></div>
   
   <div class="header-actions">
-    <!-- Separate Notification Bell Button with Badge Support -->
     <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications">
       <span style="font-size: 16px;">🔔</span>
     </button>
-
-    <!-- Separate Profile Button -->
     <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
       <span class="profile-avatar" id="topAvatar">PF</span>
       <span>Profile</span>
@@ -259,6 +256,7 @@ let currentMedia = null;
 let activeRecipient = null;
 let chatSubscription = null;
 let notificationSubscription = null;
+let postRealtimeChannel = null;
 
 const navItems=[
  ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
@@ -272,7 +270,15 @@ function refreshApp(){window.location.reload()}
 $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = refreshApp;
 
-function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
+function initSupabase(){
+  try{
+    if(window.supabase?.createClient) {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        realtime: { params: { eventsPerSecond: 10 } }
+      });
+    }
+  }catch(e){sb=null}
+}
 
 function buildNav(){
   for(const host of [$("sideNav"),$("mobileNav")]){
@@ -354,7 +360,6 @@ $("logout").onclick=async()=>{
   closeApp();
 };
 
-/* Button Click Handlers */
 $("topBell").onclick = () => {
   showPage("notifications");
   loadNotifications();
@@ -369,7 +374,6 @@ $("topProfile").onclick = () => {
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
 
-/* File & Clipboard Handling */
 function setMediaFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -439,32 +443,32 @@ async function loadPosts() {
 }
 
 function subscribeToPosts() {
-  if (mode === "cloud" && sb) {
-    sb.channel('public:posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
-        posts.unshift(payload.new);
-        renderFeed();
-
-        if (payload.new.user_id !== user?.id) {
-          await sb.from('notifications').insert([{
-            user_id: user.id,
-            type: 'post',
-            target_id: payload.new.id,
-            title: `Post from ${payload.new.user_name || 'A friend'}`,
-            message: payload.new.text ? (payload.new.text.length > 35 ? payload.new.text.slice(0, 35) + '...' : payload.new.text) : 'Shared a new media post.',
-            is_read: false
-          }]);
-        }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
-        const index = posts.findIndex(p => p.id === payload.new.id);
-        if (index > -1) {
-          posts[index] = payload.new;
-          renderFeed();
-        }
-      })
-      .subscribe();
+  if (mode !== "cloud" || !sb) return;
+  
+  if (postRealtimeChannel) {
+    sb.removeChannel(postRealtimeChannel);
   }
+
+  postRealtimeChannel = sb.channel('public:posts-realtime')
+    .on(
+      'postgres_changes', 
+      { event: '*', schema: 'public', table: 'posts' }, 
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (!posts.some(p => p.id === payload.new.id)) {
+            posts.unshift(payload.new);
+            renderFeed();
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const index = posts.findIndex(p => p.id === payload.new.id);
+          if (index > -1) {
+            posts[index] = payload.new;
+            renderFeed();
+          }
+        }
+      }
+    )
+    .subscribe();
 }
 
 function renderFeed(){
@@ -585,7 +589,6 @@ async function addComment(postId) {
   $(`comments-${postId}`)?.classList.add('open');
 }
 
-/* --- Notifications & Unread Badge Counter Logic --- */
 async function loadNotificationsCount() {
   if (mode !== "cloud" || !sb || !user) return;
   const { count, error } = await sb
@@ -693,14 +696,13 @@ function subscribeToNotifications() {
         schema: 'public', 
         table: 'notifications', 
         filter: `user_id=eq.${user.id}` 
-      }, (payload) => {
+      }, () => {
         loadNotificationsCount();
       })
       .subscribe();
   }
 }
 
-/* --- Direct Messaging Logic --- */
 async function loadChatUsers() {
   const usersListElem = $("chatUsersList");
   if (mode !== "cloud" || !sb) {

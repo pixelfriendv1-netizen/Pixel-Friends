@@ -252,9 +252,9 @@ let notificationSubscription = null;
 let postsSubscription = null;
 
 const navItems=[
- ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
- ["notifications","◉","Notifications"],["playlist","♫","Playlist"],
- ["profile","◎","Profile"],["settings","⚙","Settings"]
+  ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
+  ["notifications","◉","Notifications"],["playlist","♫","Playlist"],
+  ["profile","◎","Profile"],["settings","⚙","Settings"]
 ];
 
 function $(id){return document.getElementById(id)}
@@ -264,6 +264,11 @@ $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = refreshApp;
 
 function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function buildNav(){
   for(const host of [$("sideNav"),$("mobileNav")]){
@@ -371,7 +376,6 @@ async function setMediaFile(file) {
   if (mode === "cloud" && sb) {
     $("uploadStatus").textContent = "Uploading media file to cloud storage...";
     
-    // Robust safe ASCII filename generation avoiding special character/Chinese character upload failures
     const fileExt = file.name.split('.').pop() || 'bin';
     const safeName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     
@@ -390,7 +394,6 @@ async function setMediaFile(file) {
     $("uploadStatus").textContent = "Upload complete!";
     renderMediaPreview();
   } else {
-    // Fallback for demo mode reader
     const reader = new FileReader();
     reader.onload = (e) => {
       currentMedia = { type, src: e.target.result };
@@ -441,6 +444,9 @@ $("postBtn").onclick = async () => {
   if (mode === "cloud" && sb) {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
+    
+    // Instant feed update without waiting for real-time lag
+    await loadPosts();
   } else {
     posts.unshift({ ...newPost, id: 'local-' + Date.now(), created_at: new Date().toISOString(), likes: [], comments: [] });
     renderFeed();
@@ -517,9 +523,9 @@ async function loadOnlineFriends() {
 
 function startChatWithUser(uid, name) {
   showPage("messages");
-  loadChatUsers();
+  if (typeof loadChatUsers === 'function') loadChatUsers();
   setTimeout(() => {
-    selectChatUser(uid, name);
+    if (typeof selectChatUser === 'function') selectChatUser(uid, name);
   }, 300);
 }
 
@@ -658,8 +664,7 @@ async function loadNotifications() {
   if (!container) return;
 
   if (mode !== "cloud" || !sb || !user) {
-    container.innerHTML = '<div class="empty">Notifications require cloud mode.</div>';
-    updateNotificationBadge(0);
+    container.innerHTML = '<div class="empty">Notifications are only available in cloud mode.</div>';
     return;
   }
 
@@ -667,74 +672,38 @@ async function loadNotifications() {
     .from('notifications')
     .select('*')
     .eq('user_id', user.id)
-    .order('id', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error || !data || data.length === 0) {
-    container.innerHTML = '<div class="empty">You\'re all caught up on messages, mentions, reactions, and feed activity.</div>';
-    updateNotificationBadge(0);
+    container.innerHTML = '<div class="empty">You\'re all caught up.</div>';
     return;
   }
 
-  updateNotificationBadge(0);
-  
-  await sb.from('notifications')
-    .update({ is_read: true })
-    .eq('user_id', user.id)
-    .eq('is_read', false);
-
   container.innerHTML = data.map(n => `
-    <div class="notification-item" onclick="handleNotificationClick('${esc(n.type || 'general')}', '${esc(n.target_id || '')}')">
-      <div style="font-weight: bold; color: var(--cyan);">${esc(n.title || 'Notification')}</div>
-      <div style="font-size: 13px; color: var(--text); margin-top: 3px;">${esc(n.message || n.content || '')}</div>
+    <div class="notification-item" onclick="markNotificationRead('${n.id}')" style="${n.is_read ? 'opacity: 0.6;' : ''}">
+      <div style="font-size: 13px;">${esc(n.content || n.message || 'New notification')}</div>
+      <div style="font-size: 10px; color: var(--muted); margin-top: 4px;">${new Date(n.created_at).toLocaleString()}</div>
     </div>
   `).join('');
 }
 
-function handleNotificationClick(type, targetId) {
-  closeMenu();
-
-  if (type === 'message') {
-    showPage("messages");
-    loadChatUsers();
-    if (targetId) {
-      setTimeout(() => {
-        const userItem = Array.from(document.querySelectorAll('.chat-user-item')).find(el => el.getAttribute('onclick')?.includes(targetId));
-        if (userItem) userItem.click();
-      }, 350);
-    }
-  } else if (type === 'post') {
-    showPage("home");
-    if (targetId) {
-      setTimeout(() => {
-        const postElement = document.querySelector(`[data-post-id="${targetId}"]`);
-        if (postElement) {
-          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          postElement.style.borderColor = 'var(--cyan)';
-          setTimeout(() => postElement.style.borderColor = '', 2000);
-        }
-      }, 250);
-    }
-  } else {
-    showPage("notifications");
-  }
+async function markNotificationRead(id) {
+  if (mode !== "cloud" || !sb) return;
+  await sb.from('notifications').update({ is_read: true }).eq('id', id);
+  loadNotifications();
+  loadNotificationsCount();
 }
 
 function updateNotificationBadge(count) {
-  const bellBtn = $("topBell");
-  if (!bellBtn) return;
-  
-  let badge = bellBtn.querySelector('.nav-badge');
+  let badge = document.getElementById('notifBadge');
+  const bell = document.getElementById('topBell');
+  if (!bell) return;
   if (count > 0) {
     if (!badge) {
       badge = document.createElement('span');
+      badge.id = 'notifBadge';
       badge.className = 'nav-badge';
-      badge.onclick = (e) => {
-        e.stopPropagation();
-        showPage("notifications");
-        loadNotifications();
-        closeMenu();
-      };
-      bellBtn.appendChild(badge);
+      bell.appendChild(badge);
     }
     badge.textContent = count;
   } else if (badge) {
@@ -746,112 +715,17 @@ function subscribeToNotifications() {
   if (notificationSubscription) sb.removeChannel(notificationSubscription);
   if (mode === "cloud" && sb && user) {
     notificationSubscription = sb.channel('public:notifications_' + user.id)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${user.id}` 
-      }, (payload) => {
-        console.log("New notification received:", payload);
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
         loadNotificationsCount();
+        loadNotifications();
       })
       .subscribe();
   }
 }
 
-async function loadChatUsers() {
-  const usersListElem = $("chatUsersList");
-  if (mode !== "cloud" || !sb) {
-    usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">Chat requires cloud mode.</div>';
-    return;
-  }
-
-  const { data, error } = await sb.from('posts').select('user_id, user_name').order('created_at', { ascending: false });
-  if (error || !data) { usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">Failed to load users.</div>'; return; }
-
-  const uniqueUsersMap = new Map();
-  data.forEach(item => {
-    if (item.user_id && item.user_id !== user.id && !uniqueUsersMap.has(item.user_id)) {
-      uniqueUsersMap.set(item.user_id, item.user_name || 'Pixel Friend');
-    }
-  });
-
-  const uniqueUsers = Array.from(uniqueUsersMap.entries());
-  if (uniqueUsers.length === 0) { usersListElem.innerHTML = '<div class="empty" style="padding:15px;font-size:12px;">No other users found yet.</div>'; return; }
-
-  usersListElem.innerHTML = uniqueUsers.map(([uid, name]) => `
-    <div class="chat-user-item" onclick="selectChatUser('${uid}', '${esc(name)}')">
-      <b>${esc(name)}</b>
-    </div>
-  `).join('');
-}
-
-function selectChatUser(recipientId, recipientName) {
-  activeRecipient = recipientId;
-  $("chatHeader").textContent = `Chat with ${recipientName}`;
-  $("chatForm").classList.remove("hidden");
-  document.querySelectorAll(".chat-user-item").forEach(el => el.classList.remove("active"));
-  const clickedItem = Array.from(document.querySelectorAll('.chat-user-item')).find(el => el.getAttribute('onclick')?.includes(recipientId));
-  if (clickedItem) clickedItem.classList.add("active");
-  loadMessages();
-  subscribeToMessages();
-}
-
-async function loadMessages() {
-  if (!activeRecipient || !sb) return;
-  const { data, error } = await sb
-    .from('messages')
-    .select('*')
-    .or(`and(sender_id.eq.${user.id},recipient_id.eq.${activeRecipient}),and(sender_id.eq.${activeRecipient},recipient_id.eq.${user.id})`)
-    .order('created_at', { ascending: true });
-
-  const messagesList = $("chatMessagesList");
-  if (error || !data || data.length === 0) { messagesList.innerHTML = '<div class="empty">No messages yet. Start the conversation!</div>'; return; }
-
-  messagesList.innerHTML = data.map(m => {
-    const isSender = m.sender_id === user.id;
-    const msgTime = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    return `<div class="chat-msg ${isSender ? 'sent' : 'received'}">
-      <div>${esc(m.content)}</div>
-      <div style="font-size: 9px; opacity: 0.7; margin-top: 2px; text-align: right;">${esc(msgTime)}</div>
-    </div>`;
-  }).join('');
-  messagesList.scrollTop = messagesList.scrollHeight;
-}
-
-async function handleMessageSubmit(event) {
-  event.preventDefault();
-  if (!activeRecipient || !sb) return;
-  const inputElem = $("chatInput");
-  const content = inputElem.value.trim();
-  if (!content) return;
-
-  const { error } = await sb.from('messages').insert({ sender_id: user.id, recipient_id: activeRecipient, content: content });
-  if (error) {
-    alert("Failed to send message: " + error.message);
-  } else {
-    inputElem.value = ''; 
-    loadMessages(); 
-  }
-}
-
-function subscribeToMessages() {
-  if (chatSubscription) sb.removeChannel(chatSubscription);
-  if (sb && user) {
-    chatSubscription = sb.channel('public:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const msg = payload.new;
-        if ((msg.sender_id === user.id && msg.recipient_id === activeRecipient) || (msg.sender_id === activeRecipient && msg.recipient_id === user.id)) {
-          loadMessages();
-        }
-      })
-      .subscribe();
-  }
-}
-
-function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-
-buildNav(); initSupabase();
-(async()=>{if(sb){try{const {data}=await sb.auth.getSession();if(data.session){user=data.session.user;mode="cloud";openApp()}}catch(e){}}})();
+// Initializers
+initSupabase();
+buildNav();
 </script>
-</body></html>
+</body>
+</html>

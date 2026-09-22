@@ -370,10 +370,13 @@ async function setMediaFile(file) {
 
   if (mode === "cloud" && sb) {
     $("uploadStatus").textContent = "Uploading media file to cloud storage...";
-    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     
-    console.log("Starting Supabase upload to bucket 'post-media' with filename:", fileName);
-    const { data, error } = await sb.storage.from('post-media').upload(fileName, file);
+    // Robust safe ASCII filename generation avoiding special character/Chinese character upload failures
+    const fileExt = file.name.split('.').pop() || 'bin';
+    const safeName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    
+    console.log("Starting Supabase upload to bucket 'post-media' with filename:", safeName);
+    const { data, error } = await sb.storage.from('post-media').upload(safeName, file);
     
     if (error) {
       console.error("Supabase Storage Upload Error:", error);
@@ -382,7 +385,7 @@ async function setMediaFile(file) {
     }
 
     console.log("Upload successful, fetching public URL...", data);
-    const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(fileName);
+    const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
     currentMedia = { type, src: publicUrlData.publicUrl };
     $("uploadStatus").textContent = "Upload complete!";
     renderMediaPreview();

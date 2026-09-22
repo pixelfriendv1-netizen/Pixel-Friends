@@ -188,7 +188,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
       <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">Loading community feed…</div></div></div>
     </div>
     <div>
-      <div class="card"><h3>Online friends</h3><div class="list"><div class="empty">No friends online yet.</div></div></div>
+      <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center">Online friends <span id="presenceStatus" class="muted" style="font-size:10px;font-weight:600">CONNECTING…</span></h3><div class="list"><div class="empty">Connecting to online status…</div></div></div>
     </div>
   </div>
 </section>
@@ -320,15 +320,27 @@ function renderOnlineFriends(){
 
 async function startPresence(){
   if(!sb || !user) return;
+  const statusEl=$('presenceStatus');
+  const setPresenceStatus=(text,ok=false)=>{
+    if(!statusEl) return;
+    statusEl.textContent=text;
+    statusEl.style.color=ok?'var(--good)':'var(--muted)';
+  };
+
   if(presenceChannel){
     try{ await sb.removeChannel(presenceChannel); }catch(e){}
     presenceChannel=null;
   }
-  presenceChannel=sb.channel('pixel-friends-presence-v1',{
-    config:{presence:{key:user.id}}
+
+  // All devices use the same Presence room. Each authenticated user gets
+  // their own Presence key, so different accounts appear as separate users.
+  presenceChannel=sb.channel('pixel-friends-presence-v2',{
+    config:{presence:{key:String(user.id)}}
   });
+
   presenceChannel
     .on('presence',{event:'sync'},()=>{
+      setPresenceStatus('ONLINE',true);
       renderOnlineFriends();
     })
     .on('presence',{event:'join'},()=>{
@@ -341,21 +353,38 @@ async function startPresence(){
       if(status==='SUBSCRIBED'){
         try{
           await presenceChannel.track({
-            user_id:user.id,
+            user_id:String(user.id),
             display_name:displayName(),
             online_at:new Date().toISOString()
           });
+          setPresenceStatus('ONLINE',true);
           renderOnlineFriends();
         }catch(e){
-          console.warn('Presence track failed:',e);
-          renderOnlineFriends();
+          console.error('Presence track failed:',e);
+          setPresenceStatus('TRACK ERROR');
         }
-      }else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT'){
-        renderOnlineFriends();
+      }else if(status==='CHANNEL_ERROR'){
+        setPresenceStatus('ERROR');
+      }else if(status==='TIMED_OUT'){
+        setPresenceStatus('TIMEOUT');
+      }else if(status==='CLOSED'){
+        setPresenceStatus('OFFLINE');
       }
     });
-}
 
+  // If a phone/browser wakes from sleep, re-establish Presence.
+  if(!window.__pfPresenceWakeBound){
+    window.__pfPresenceWakeBound=true;
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible' && user){
+        setTimeout(()=>startPresence(),250);
+      }
+    });
+    window.addEventListener('online',()=>{
+      if(user) startPresence();
+    });
+  }
+}
 
 function openApp(){
  $("auth").classList.add("hidden");

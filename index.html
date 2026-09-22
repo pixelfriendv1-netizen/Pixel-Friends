@@ -106,6 +106,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   .grid{grid-template-columns:1fr}
   .hero{padding:22px}
 }
+.post{contain:content;}
+.post-media img,.post-media video{content-visibility:auto;}
 </style>
 </head>
 <body>
@@ -272,7 +274,7 @@ function displayName(){
 
 
 function renderOnlineFriends(){
-  const container=document.querySelector('.grid > div:nth-child(2) .list');
+  const container=$('onlineFriendsList');
   if(!container) return;
   const state=presenceChannel?.presenceState?.() || {};
   const people=[];
@@ -318,7 +320,7 @@ function renderOnlineFriends(){
   });
 }
 
-async function startPresence(){
+async function startPresence(force=false){
   if(!sb || !user) return;
   const statusEl=$('presenceStatus');
   const setPresenceStatus=(text,ok=false)=>{
@@ -327,14 +329,27 @@ async function startPresence(){
     statusEl.style.color=ok?'var(--good)':'var(--muted)';
   };
 
+  // Keep an existing healthy channel. Recreating Presence on every
+  // visibility event causes needless disconnect/reconnect delays.
+  if(presenceChannel && !force){
+    try{
+      await presenceChannel.track({
+        user_id:String(user.id),
+        display_name:displayName(),
+        online_at:new Date().toISOString()
+      });
+      setPresenceStatus('ONLINE',true);
+      renderOnlineFriends();
+      return;
+    }catch(_){ /* recreate below */ }
+  }
+
   if(presenceChannel){
     try{ await sb.removeChannel(presenceChannel); }catch(e){}
     presenceChannel=null;
   }
 
-  // All devices use the same Presence room. Each authenticated user gets
-  // their own Presence key, so different accounts appear as separate users.
-  presenceChannel=sb.channel('pixel-friends-presence-v2',{
+  presenceChannel=sb.channel('pixel-friends-presence-v3',{
     config:{presence:{key:String(user.id)}}
   });
 
@@ -343,12 +358,8 @@ async function startPresence(){
       setPresenceStatus('ONLINE',true);
       renderOnlineFriends();
     })
-    .on('presence',{event:'join'},()=>{
-      renderOnlineFriends();
-    })
-    .on('presence',{event:'leave'},()=>{
-      renderOnlineFriends();
-    })
+    .on('presence',{event:'join'},()=>renderOnlineFriends())
+    .on('presence',{event:'leave'},()=>renderOnlineFriends())
     .subscribe(async status=>{
       if(status==='SUBSCRIBED'){
         try{
@@ -365,24 +376,21 @@ async function startPresence(){
         }
       }else if(status==='CHANNEL_ERROR'){
         setPresenceStatus('ERROR');
+        window.setTimeout(()=>{ if(user && !document.hidden) startPresence(true); },3000);
       }else if(status==='TIMED_OUT'){
         setPresenceStatus('TIMEOUT');
+        window.setTimeout(()=>{ if(user && !document.hidden) startPresence(true); },3000);
       }else if(status==='CLOSED'){
         setPresenceStatus('OFFLINE');
       }
     });
 
-  // If a phone/browser wakes from sleep, re-establish Presence.
   if(!window.__pfPresenceWakeBound){
     window.__pfPresenceWakeBound=true;
     document.addEventListener('visibilitychange',()=>{
-      if(document.visibilityState==='visible' && user){
-        setTimeout(()=>startPresence(),250);
-      }
+      if(document.visibilityState==='visible' && user) startPresence(false);
     });
-    window.addEventListener('online',()=>{
-      if(user) startPresence();
-    });
+    window.addEventListener('online',()=>{ if(user) startPresence(false); });
   }
 }
 
@@ -587,8 +595,11 @@ $("postBtn").onclick = async () => {
     media: currentMedia ? {...currentMedia} : null, created_at: now,
     likes_users: [], likes_count: 0, comments: [], _pending: true
   };
-  posts = [optimisticPost, ...posts].slice(0, 25);
-  renderFeed();
+  posts = [optimisticPost, ...posts].slice(0, FEED_LIMIT);
+  const feed=$('feed');
+  const empty=feed.querySelector('.empty'); if(empty) empty.remove();
+  feed.insertAdjacentHTML('afterbegin',renderSinglePost(optimisticPost));
+  attachMediaRecovery();
   $("postText").value = "";
   currentMedia = null;
   $("uploadStatus").textContent = "";
@@ -600,9 +611,12 @@ $("postBtn").onclick = async () => {
     }]).select('id,user_id,user_name,text,media,created_at').single();
     if (error) throw error;
     const saved = {...data, likes_users:[], likes_count:0, comments:[]};
+    const pos = posts.findIndex(p => p.id === tempId);
     posts = posts.map(p => p.id === tempId ? saved : p);
+    const tempEl=postElement(tempId);
+    if(tempEl) tempEl.outerHTML=renderSinglePost(saved); else renderFeed();
+    attachMediaRecovery();
     saveFeedCache();
-    renderFeed();
   } catch (err) {
     posts = posts.filter(p => p.id !== tempId);
     renderFeed();
@@ -619,7 +633,7 @@ function saveFeedCache(){
 function loadFeedCache(){
   try {
     const cached=JSON.parse(localStorage.getItem(FEED_CACHE_KEY)||"[]");
-    if(Array.isArray(cached)&&cached.length){ posts=cached; renderFeed(); renderOnlineFriends(posts); return true; }
+    if(Array.isArray(cached)&&cached.length){ posts=cached; renderFeed(); return true; }
   } catch(e) {}
   return false;
 }
@@ -642,7 +656,7 @@ async function loadPosts(background=false){
       const list=rows||[];
       if(!list.length){
         const pending=posts.filter(p=>p._pending);
-        posts=pending; renderFeed(); renderOnlineFriends(posts); setupMessages(); saveFeedCache(); return;
+        posts=pending; renderFeed(); setupMessages(); saveFeedCache(); return;
       }
       const ids=list.map(p=>p.id);
       const [likesRes,commentsRes]=await Promise.all([
@@ -658,7 +672,7 @@ async function loadPosts(background=false){
       // Preserve any local optimistic operations that are still waiting for Supabase.
       const pending=posts.filter(p=>p._pending && !fresh.some(x=>x.id===p.id));
       posts=[...pending,...fresh].slice(0,FEED_LIMIT);
-      renderFeed(); renderOnlineFriends(posts); setupMessages(); saveFeedCache();
+      renderFeed(); setupMessages(); saveFeedCache();
     }catch(err){
       console.error('Feed refresh failed:',err);
       if(!posts.length) feed.innerHTML='<div class="empty">Could not load the community feed. Please try again.</div>';
@@ -675,7 +689,7 @@ function upsertRealtimePost(row){
   }else{
     posts=[{...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]},...posts.filter(p=>!p._pending)].slice(0,FEED_LIMIT);
   }
-  saveFeedCache(); renderFeed(); renderOnlineFriends(posts);
+  saveFeedCache(); renderFeed();
 }
 
 function applyRealtimeLike(payload){
@@ -789,12 +803,19 @@ function subscribeToFeed(){
         const row=payload.new; if(!row?.id || posts.some(x=>x.id===row.id))return;
         const pendingIndex=posts.findIndex(x=>x._pending && x.user_id===row.user_id && (x.text||null)===(row.text||null));
         const fresh={...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]};
-        if(pendingIndex>=0) posts[pendingIndex]=fresh;
-        else posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
         const feed=$('feed');
         const empty=feed.querySelector('.empty'); if(empty)empty.remove();
-        feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
-        attachMediaRecovery(); saveFeedCache(); renderOnlineFriends(posts);
+        if(pendingIndex>=0){
+          const oldId=posts[pendingIndex].id;
+          posts[pendingIndex]=fresh;
+          const oldEl=postElement(oldId);
+          if(oldEl) oldEl.outerHTML=renderSinglePost(fresh);
+          else feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
+        }else{
+          posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
+          feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
+        }
+        attachMediaRecovery(); saveFeedCache();
       })
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>{
         const post=postById(payload.new?.id); if(!post)return;
@@ -803,7 +824,7 @@ function subscribeToFeed(){
         attachMediaRecovery(); saveFeedCache();
       })
       .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},payload=>{
-        const id=payload.old?.id; posts=posts.filter(x=>x.id!==id); postElement(id)?.remove(); saveFeedCache(); renderOnlineFriends(posts);
+        const id=payload.old?.id; posts=posts.filter(x=>x.id!==id); postElement(id)?.remove(); saveFeedCache();
       })
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
       .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
@@ -830,6 +851,81 @@ function commentHtml(c){
   const text=esc(c?.content||'');
   const id=c?.id?esc(c.id):'';
   return `<div class="comment-item" data-comment-id="${id}"><div><b>${name}:</b> ${text}</div></div>`;
+}
+
+function postById(id){
+  return posts.find(p=>String(p.id)===String(id)) || null;
+}
+function postElement(id){
+  if(!id) return null;
+  return document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`);
+}
+
+async function handleLike(postId){
+  const post=postById(postId);
+  if(!post || !user || !sb || post._likeBusy) return;
+  post._likeBusy=true;
+  const wasLiked=(post.likes_users||[]).includes(user.id);
+  const users=new Set(post.likes_users||[]);
+  if(wasLiked) users.delete(user.id); else users.add(user.id);
+  post.likes_users=[...users];
+  post.likes_count=post.likes_users.length;
+  updatePostDom(post);
+
+  try{
+    if(wasLiked){
+      const {error}=await sb.from('likes').delete().eq('post_id',postId).eq('user_id',user.id);
+      if(error) throw error;
+    }else{
+      const {error}=await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);
+      if(error) throw error;
+    }
+    saveFeedCache();
+  }catch(err){
+    const rollback=new Set(post.likes_users||[]);
+    if(wasLiked) rollback.add(user.id); else rollback.delete(user.id);
+    post.likes_users=[...rollback];
+    post.likes_count=post.likes_users.length;
+    updatePostDom(post);
+    console.warn('Like failed:',err);
+  }finally{
+    post._likeBusy=false;
+  }
+}
+
+async function handleAddComment(postId,event){
+  event?.preventDefault();
+  const post=postById(postId);
+  if(!post || !user || !sb || post._commentBusy) return;
+  const input=$(`comment-input-${postId}`);
+  const text=input?.value.trim()||'';
+  if(!text) return;
+  post._commentBusy=true;
+  const tempId=`temp-comment-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+  const optimistic={id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
+  post.comments=post.comments||[];
+  post.comments.push(optimistic);
+  if(input) input.value='';
+  updatePostDom(post);
+
+  try{
+    const {data,error}=await sb.from('comments').insert([{
+      post_id:postId,user_id:user.id,user_name:displayName(),content:text
+    }]).select('id,post_id,user_id,user_name,content,created_at').single();
+    if(error) throw error;
+    const i=post.comments.findIndex(c=>c.id===tempId);
+    if(i>=0) post.comments[i]={...data};
+    else if(!post.comments.some(c=>c.id===data.id)) post.comments.push(data);
+    updatePostDom(post);
+    saveFeedCache();
+  }catch(err){
+    post.comments=post.comments.filter(c=>c.id!==tempId);
+    updatePostDom(post);
+    if(input) input.value=text;
+    console.warn('Comment failed:',err);
+  }finally{
+    post._commentBusy=false;
+  }
 }
 
 function updatePostDom(post){

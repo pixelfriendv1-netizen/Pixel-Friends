@@ -66,7 +66,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .preview-item img,.preview-item video,.preview-item audio{max-width:100%;width:100%;border-radius:8px;border:1px solid var(--line)}
 .preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center;z-index:5}
 .post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
-.post-media audio{width:100%;margin-top:10px}
+.post-media audio{width:100%;margin-top:10px}.media-error{font-size:12px;margin-top:8px;padding:8px;border:1px dashed var(--line);border-radius:6px}
 .post-actions{display:flex;gap:15px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .post-action-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px}
 .post-action-btn.liked{color:var(--danger)}
@@ -355,10 +355,66 @@ async function setMediaFile(file) {
   const { error } = await sb.storage.from('post-media').upload(safeName, uploadFile, {contentType: uploadFile.type || undefined, cacheControl:'31536000', upsert:false});
   if (error) { $('uploadStatus').textContent = 'Upload failed: ' + error.message; return; }
   const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
-  currentMedia = {type, src: publicUrlData.publicUrl};
+  currentMedia = {type, src: publicUrlData.publicUrl, path: safeName};
   $('uploadStatus').textContent = 'Ready!';
   renderMediaPreview();
 }
+function normalizeMedia(media){
+  if(!media) return null;
+  if(typeof media === 'string'){
+    try{ media=JSON.parse(media); }catch(e){ return {type:'audio',src:media}; }
+  }
+  if(typeof media !== 'object') return null;
+  const type = media.type || media.mime_type?.split('/')[0] || 'audio';
+  return {...media, type, src:media.src || media.url || media.publicUrl || ''};
+}
+
+function mediaPathFromUrl(src){
+  try{
+    const marker='/storage/v1/object/public/post-media/';
+    const signedMarker='/storage/v1/object/sign/post-media/';
+    if(src.includes(marker)) return decodeURIComponent(src.split(marker)[1].split('?')[0]);
+    if(src.includes(signedMarker)) return decodeURIComponent(src.split(signedMarker)[1].split('?')[0]);
+  }catch(e){}
+  return null;
+}
+
+async function getSignedMediaUrl(media){
+  const m=normalizeMedia(media);
+  const path=m?.path || mediaPathFromUrl(m?.src||'');
+  if(!sb || !path) return null;
+  try{
+    const {data,error}=await sb.storage.from('post-media').createSignedUrl(path,3600);
+    return error ? null : data?.signedUrl || null;
+  }catch(e){ return null; }
+}
+
+async function recoverMediaElement(el){
+  if(!el || el.dataset.recovered==='1') return;
+  el.dataset.recovered='1';
+  const media=normalizeMedia({src:el.currentSrc || el.src,type:el.dataset.mediaType,path:el.dataset.mediaPath});
+  const signed=await getSignedMediaUrl(media);
+  if(signed && signed!==el.src){
+    el.dataset.recovered='2';
+    el.src=signed;
+    try{ el.load(); }catch(e){}
+  }else{
+    const holder=el.closest('.post-media');
+    if(holder && !holder.querySelector('.media-error')){
+      const msg=document.createElement('div');
+      msg.className='media-error muted';
+      msg.textContent='Media could not be loaded. Check the post-media storage bucket permissions.';
+      holder.appendChild(msg);
+    }
+  }
+}
+
+function attachMediaRecovery(){
+  document.querySelectorAll('#feed audio[data-media], #feed video[data-media]').forEach(el=>{
+    el.addEventListener('error',()=>recoverMediaElement(el),{once:true});
+  });
+}
+
 function renderMediaPreview() {
   const container = $("mediaPreview");
   if (!currentMedia) { container.innerHTML = ""; return; }
@@ -447,9 +503,11 @@ async function loadPosts(background=false){
         .order('created_at',{ascending:false}).limit(FEED_LIMIT);
       if(error) throw error;
       const list=rows||[];
-      if(!list.length){posts=[];renderFeed();renderOnlineFriends([]);saveFeedCache();return;}
+      if(!list.length){
+        const pending=posts.filter(p=>p._pending);
+        posts=pending; renderFeed(); renderOnlineFriends(posts); saveFeedCache(); return;
+      }
       const ids=list.map(p=>p.id);
-      // Keep related queries bounded. Comments are capped per feed request so one viral post cannot block the whole feed.
       const [likesRes,commentsRes]=await Promise.all([
         sb.from('likes').select('post_id,user_id').in('post_id',ids),
         sb.from('comments').select('id,post_id,user_id,user_name,content,created_at').in('post_id',ids).order('created_at',{ascending:true}).limit(150)
@@ -459,8 +517,10 @@ async function loadPosts(background=false){
       const likes=new Map(), comments=new Map();
       (likesRes.data||[]).forEach(x=>{if(!likes.has(x.post_id))likes.set(x.post_id,[]);likes.get(x.post_id).push(x.user_id)});
       (commentsRes.data||[]).forEach(x=>{if(!comments.has(x.post_id))comments.set(x.post_id,[]);comments.get(x.post_id).push(x)});
-      const fresh=list.map(p=>({...p,likes_users:likes.get(p.id)||[],likes_count:(likes.get(p.id)||[]).length,comments:comments.get(p.id)||[]}));
-      posts=fresh;
+      const fresh=list.map(p=>({...p,media:normalizeMedia(p.media),likes_users:likes.get(p.id)||[],likes_count:(likes.get(p.id)||[]).length,comments:comments.get(p.id)||[]}));
+      // Preserve any local optimistic operations that are still waiting for Supabase.
+      const pending=posts.filter(p=>p._pending && !fresh.some(x=>x.id===p.id));
+      posts=[...pending,...fresh].slice(0,FEED_LIMIT);
       renderFeed(); renderOnlineFriends(posts); saveFeedCache();
     }catch(err){
       console.error('Feed refresh failed:',err);
@@ -470,26 +530,73 @@ async function loadPosts(background=false){
   return feedRequest;
 }
 
+function upsertRealtimePost(row){
+  if(!row?.id) return;
+  const existing=posts.find(p=>p.id===row.id);
+  if(existing){
+    Object.assign(existing,row,{media:normalizeMedia(row.media)});
+  }else{
+    posts=[{...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]},...posts.filter(p=>!p._pending)].slice(0,FEED_LIMIT);
+  }
+  saveFeedCache(); renderFeed(); renderOnlineFriends(posts);
+}
+
+function applyRealtimeLike(payload){
+  const row=payload?.new || payload?.old;
+  const post=posts.find(p=>p.id===row?.post_id);
+  if(!post) return;
+  const uid=row.user_id;
+  const users=new Set(post.likes_users||[]);
+  if(payload.eventType==='INSERT') users.add(uid); else users.delete(uid);
+  post.likes_users=[...users]; post.likes_count=post.likes_users.length;
+  saveFeedCache(); renderFeed();
+}
+
+function applyRealtimeComment(payload){
+  const row=payload?.new || payload?.old;
+  const post=posts.find(p=>p.id===row?.post_id);
+  if(!post || !row) return;
+  post.comments=post.comments||[];
+  if(payload.eventType==='INSERT'){
+    if(!post.comments.some(c=>c.id===row.id)){
+      // Replace our optimistic copy when the server event arrives.
+      const idx=post.comments.findIndex(c=>c._pending && c.user_id===row.user_id && c.content===row.content);
+      if(idx>=0) post.comments[idx]=row; else post.comments.push(row);
+    }
+  }else if(payload.eventType==='UPDATE'){
+    const idx=post.comments.findIndex(c=>c.id===row.id); if(idx>=0) post.comments[idx]=row;
+  }else if(payload.eventType==='DELETE'){
+    post.comments=post.comments.filter(c=>c.id!==row.id);
+  }
+  post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  saveFeedCache(); renderFeed();
+}
+
 function subscribeToFeed(){
   if(!sb || !user || realtimeChannel) return;
   try{
-    realtimeChannel=sb.channel('pixel-friends-feed')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},()=>scheduleFeedRefresh(150))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},()=>scheduleFeedRefresh(150))
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},()=>scheduleFeedRefresh(150))
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},()=>scheduleFeedRefresh(250))
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},()=>scheduleFeedRefresh(250))
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},()=>scheduleFeedRefresh(250))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},()=>scheduleFeedRefresh(250))
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},()=>scheduleFeedRefresh(250))
-      .subscribe(status=>{ if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; polling fallback active.'); });
+    realtimeChannel=sb.channel('pixel-friends-feed-live')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>upsertRealtimePost(payload.new))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>upsertRealtimePost(payload.new))
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},payload=>{
+        posts=posts.filter(p=>p.id!==payload.old?.id); saveFeedCache(); renderFeed(); renderOnlineFriends(posts);
+      })
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},applyRealtimeComment)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},applyRealtimeComment)
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},applyRealtimeComment)
+      .subscribe(status=>{
+        window.__pfRealtimeReady = status==='SUBSCRIBED';
+        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; 30s fallback polling active.');
+      });
   }catch(e){console.warn('Realtime setup failed:',e);}
 }
 function startFeedUpdates(){
   subscribeToFeed();
   clearInterval(window.__pfFeedPoll);
-  // Realtime is preferred; this lightweight fallback keeps other users' changes visible if Realtime isn't enabled in Supabase.
-  window.__pfFeedPoll=setInterval(()=>loadPosts(true),15000);
+  // Realtime updates the UI immediately. Polling is only a safety net.
+  window.__pfFeedPoll=setInterval(()=>loadPosts(true),30000);
 }
 
 function renderOnlineFriends(feedPosts){
@@ -562,10 +669,12 @@ function renderFeed(){
    const name = p.user_name || 'Pixel Friend';
    const postDate = p.created_at ? new Date(p.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Just now';
    let mediaHtml = '';
-   if(p.media){
-     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}" loading="lazy" decoding="async"></div>`;
-     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls preload="none" playsinline></video></div>`;
-     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls preload="metadata"></audio></div>`;
+   const media = normalizeMedia(p.media);
+   if(media?.src){
+     const safePath = media.path ? esc(media.path) : '';
+     if(media.type==='image') mediaHtml = `<div class="post-media"><img src="${esc(media.src)}" loading="lazy" decoding="async"></div>`;
+     else if(media.type==='video') mediaHtml = `<div class="post-media"><video src="${esc(media.src)}" data-media="1" data-media-type="video" data-media-path="${safePath}" controls preload="none" playsinline></video></div>`;
+     else if(media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${esc(media.src)}" data-media="1" data-media-type="audio" data-media-path="${safePath}" controls preload="none"></audio></div>`;
    }
    const isLiked = (p.likes_users || []).includes(user?.id);
    return `<article class="post">
@@ -583,6 +692,7 @@ function renderFeed(){
      </div>
    </article>`;
  }).join("");
+ attachMediaRecovery();
 }
 
 initSupabase();

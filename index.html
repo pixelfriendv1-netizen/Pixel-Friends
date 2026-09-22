@@ -76,6 +76,14 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 
 .empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
 .list{display:grid;gap:9px}
+.online-user{display:flex;align-items:center;gap:9px;padding:9px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;cursor:pointer;width:100%;text-align:left;color:var(--text)}
+.online-user:hover{border-color:#28566c;background:#0a1822}
+.online-dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 9px #49f0a0;flex:0 0 auto}
+.online-avatar{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900;font-size:11px;flex:0 0 auto}
+.online-meta{min-width:0;display:flex;flex-direction:column}
+.online-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.online-status{font-size:10px;color:var(--good)}
+.online-count{font-size:11px;color:var(--muted);margin-left:auto}
 .page-title{font-size:28px;margin:0 0 5px}
 .page-sub{color:var(--muted);margin:0 0 20px}
 .mobile-nav{display:none}
@@ -262,6 +270,93 @@ function displayName(){
  return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Pixel Friend";
 }
 
+
+function renderOnlineFriends(){
+  const container=document.querySelector('.grid > div:nth-child(2) .list');
+  if(!container) return;
+  const state=presenceChannel?.presenceState?.() || {};
+  const people=[];
+  Object.entries(state).forEach(([key,entries])=>{
+    (entries||[]).forEach(entry=>{
+      if(!entry || entry.user_id===user?.id) return;
+      const id=entry.user_id || key;
+      if(people.some(p=>p.id===id)) return;
+      people.push({
+        id,
+        name:entry.display_name || entry.user_name || 'Pixel Friend'
+      });
+    });
+  });
+  people.sort((a,b)=>a.name.localeCompare(b.name));
+  const count=people.length;
+  if(!count){
+    container.innerHTML='<div class="empty" style="font-size:12px;padding:12px;">No other Pixel Friends are online.</div>';
+    return;
+  }
+  container.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+      <span class="muted" style="font-size:11px">ONLINE NOW</span>
+      <span class="online-count">${count}</span>
+    </div>
+    ${people.slice(0,12).map(person=>{
+      const safeId=esc(person.id), safeName=esc(person.name);
+      const initials=esc(person.name.slice(0,2).toUpperCase());
+      return `<button class="online-user" data-online-user="${safeId}" data-online-name="${safeName}">
+        <span class="online-dot"></span>
+        <span class="online-avatar">${initials}</span>
+        <span class="online-meta"><span class="online-name">${safeName}</span><span class="online-status">Online</span></span>
+      </button>`;
+    }).join('')}
+    ${count>12?`<div class="muted" style="font-size:11px;text-align:center;padding-top:3px">+${count-12} more online</div>`:''}
+  `;
+  container.querySelectorAll('[data-online-user]').forEach(btn=>{
+    btn.onclick=()=>{
+      showPage('messages');
+      closeMenu();
+      openChat(btn.dataset.onlineUser,btn.dataset.onlineName);
+    };
+  });
+}
+
+async function startPresence(){
+  if(!sb || !user) return;
+  if(presenceChannel){
+    try{ await sb.removeChannel(presenceChannel); }catch(e){}
+    presenceChannel=null;
+  }
+  presenceChannel=sb.channel('pixel-friends-presence-v1',{
+    config:{presence:{key:user.id}}
+  });
+  presenceChannel
+    .on('presence',{event:'sync'},()=>{
+      renderOnlineFriends();
+    })
+    .on('presence',{event:'join'},()=>{
+      renderOnlineFriends();
+    })
+    .on('presence',{event:'leave'},()=>{
+      renderOnlineFriends();
+    })
+    .subscribe(async status=>{
+      if(status==='SUBSCRIBED'){
+        try{
+          await presenceChannel.track({
+            user_id:user.id,
+            display_name:displayName(),
+            online_at:new Date().toISOString()
+          });
+          renderOnlineFriends();
+        }catch(e){
+          console.warn('Presence track failed:',e);
+          renderOnlineFriends();
+        }
+      }else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT'){
+        renderOnlineFriends();
+      }
+    });
+}
+
+
 function openApp(){
  $("auth").classList.add("hidden");
  $("app").style.display="block";
@@ -273,7 +368,10 @@ function openApp(){
  $("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
  
  showPage("home");
+ renderOnlineFriends();
  loadFeedCache();
+ // Presence is independent from the feed: it updates the Online friends card instantly.
+ startPresence();
  // Load server notifications only after the authenticated user is known.
  loadNotifications();
  requestAnimationFrame(() => { loadPosts(true); startFeedUpdates(); });
@@ -314,8 +412,13 @@ $("authForm").onsubmit=async e=>{
 };
 
 $("logout").onclick=async()=>{
+  try{
+    if(presenceChannel && sb){ await sb.removeChannel(presenceChannel); }
+  }catch(e){}
+  presenceChannel=null;
   if(sb)try{await sb.auth.signOut()}catch(e){}
   user=null;
+  posts=[];
   closeMenu();
   $("app").style.display="none";
   $("auth").classList.remove("hidden");
@@ -754,6 +857,8 @@ if (sb) {
     if (event === 'SIGNED_OUT') {
       user = null; posts = []; clearInterval(window.__pfFeedPoll);
       if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel=null; }
+      if (presenceChannel) { sb.removeChannel(presenceChannel); presenceChannel=null; }
+      renderOnlineFriends();
     }
   });
 }

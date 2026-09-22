@@ -3,6 +3,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://koljxgkatllfexwoxnfi.supabase.co" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pixel Friends — Cyber Community</title>
@@ -12,35 +14,15 @@
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#09253a55,transparent 35%),linear-gradient(135deg,#02050a,#06101a 55%,#03070d);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif;min-height:100vh}
 button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 #auth{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-box{width:min(460px,100%);background:#061019ee;border:1px solid #1b4357;border-radius:18px;padding:30px;box-shadow:0 0 70px #00d9ff18}
-.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px}.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
+.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px;position:relative}
+.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
 .field{margin:12px 0}.field label{display:block;color:#9eb7c8;font-size:12px;margin-bottom:6px}.field input,.composer textarea,.search{width:100%;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:9px;padding:12px;outline:none}.field input:focus,.composer textarea:focus,.search:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #39e7ff15}
-.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}.demo-note{margin-top:16px;padding:11px;border:1px dashed #28506a;border-radius:9px;color:#7896a8;font-size:12px}
+.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}
 #app{display:none;min-height:100vh}
 
-/* Shell Layout - Single column so content expands fully when side menu is hidden */
 .shell{display:block;min-height:100vh}
-
-/* Left Menu Sidebar - Hidden off-screen by default */
-.side{
-  border-right:1px solid var(--line);
-  background:#040a10f8;
-  padding:22px 14px;
-  position:fixed;
-  top:0;
-  left:0;
-  bottom:0;
-  width:270px;
-  z-index:30;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  transform:translateX(-100%);
-  transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:5px 0 35px rgba(0,0,0,0.8);
-}
-.side.open{
-  transform:translateX(0);
-}
+.side{border-right:1px solid var(--line);background:#040a10f8;padding:22px 14px;position:fixed;top:0;left:0;bottom:0;width:270px;z-index:30;display:flex;flex-direction:column;justify-content:space-between;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:5px 0 35px rgba(0,0,0,0.8)}
+.side.open{transform:translateX(0)}
 .side .logo{font-size:20px;padding:0 10px 25px;cursor:pointer}
 .nav{display:grid;gap:7px}
 .nav button{text-align:left;border-color:transparent}
@@ -49,25 +31,26 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .profile-mini{padding:12px;border:1px solid var(--line);border-radius:10px;background:#08131d;margin-bottom:8px}
 .profile-mini b{display:block}
 
-/* Header & Content Styling */
 .main{min-width:0}
 .top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 22px;background:#050b11dd;position:sticky;top:0;z-index:5}
-.top .search{max-width:420px}
 .spacer{flex:1}
 .menu-btn{width:42px;height:42px;border:1px solid #1d526d;border-radius:9px;background:#071521;color:var(--cyan);font-size:22px;display:grid;place-items:center}
 .brand-mini{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
 .brand-icon{width:38px;height:38px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);box-shadow:0 0 16px #39e7ff33;font-size:17px}
 .brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
 .brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
-.profile-btn{display:flex;align-items:center;gap:9px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
+.bell-btn .notif-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid #050b11}
+.profile-btn{display:flex;align-items:center;gap:8px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
 .profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:900}
+
 .page{display:none;padding:26px;max-width:1300px;margin:auto}
 .page.active{display:block}
-.hero{border:1px solid #1d4b60;border-radius:18px;padding:28px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22);position:relative;overflow:hidden}
-.hero:after{content:"";position:absolute;right:-80px;top:-80px;width:240px;height:240px;border:1px solid #39e7ff44;border-radius:50%;box-shadow:0 0 50px #39e7ff16}
-.eyebrow{color:var(--cyan);font-size:11px;letter-spacing:3px;font-weight:800}
-.hero h1{font-size:clamp(28px,4vw,48px);margin:8px 0}
-.hero p{color:#8ea9b9;max-width:650px}
+.hero{border:1px solid #1d4b60;border-radius:18px;padding:24px 28px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22);position:relative;overflow:hidden;margin-top:6px}
+.hero h1{font-size:clamp(24px,3.5vw,40px);margin:0 0 6px;line-height:1.2}
+.hero p{color:#8ea9b9;max-width:650px;margin:0}
 .grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
 .card{background:#07111aee;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 .card h3{margin:0 0 14px}
@@ -80,35 +63,57 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .muted{color:var(--muted)}
 .post-body{padding:12px 0}
 .media-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.preview-item{position:relative;max-width:200px}
-.preview-item img,.preview-item video{max-width:100%;border-radius:8px;border:1px solid var(--line)}
-.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center}
+.preview-item{position:relative;max-width:100%;width:100%}
+.preview-item img,.preview-item video,.preview-item audio{max-width:100%;width:100%;border-radius:8px;border:1px solid var(--line)}
+.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center;z-index:5}
 .post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
-.post-media audio{width:100%;margin-top:10px}
-.tag{display:inline-block;color:var(--cyan);background:#0b2530;border:1px solid #174a5c;padding:3px 7px;border-radius:20px;font-size:11px}
-.stat{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #112532}
-.stat:last-child{border:0}
+.post-media audio{width:100%;margin-top:10px}.media-error{font-size:12px;margin-top:8px;padding:8px;border:1px dashed var(--line);border-radius:6px}
+.post-actions{display:flex;gap:15px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.post-action-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px}
+.post-action-btn.liked{color:var(--danger)}
+.comments-box{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.comment-item{font-size:13px;padding:6px;background:#03080d;border-radius:6px;margin-top:5px;display:flex;justify-content:space-between;align-items:center;}
+
 .empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
 .list{display:grid;gap:9px}
-.person{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #153040;border-radius:9px}
-.person .spacer{flex:1}
+.online-user{display:flex;align-items:center;gap:9px;padding:9px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;cursor:pointer;width:100%;text-align:left;color:var(--text)}
+.online-user:hover{border-color:#28566c;background:#0a1822}
+.online-dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 9px #49f0a0;flex:0 0 auto}
+.online-avatar{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900;font-size:11px;flex:0 0 auto}
+.online-meta{min-width:0;display:flex;flex-direction:column}
+.online-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.online-status{font-size:10px;color:var(--good)}
+.online-count{font-size:11px;color:var(--muted);margin-left:auto}
 .page-title{font-size:28px;margin:0 0 5px}
 .page-sub{color:var(--muted);margin:0 0 20px}
 .mobile-nav{display:none}
 
-/* Backdrop when menu is shown */
+.chat-container{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px;min-height:calc(100vh - 250px);height:calc(100vh - 250px)}
+.chat-users{border-right:1px solid var(--line);padding-right:14px;overflow-y:auto;max-height:none;min-height:0}
+.chat-box{display:flex;flex-direction:column;min-height:0;height:100%;position:relative}
+.chat-header{flex:0 0 auto;padding:10px 4px 12px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan);background:var(--panel);}
+.chat-composer{flex:0 0 auto;display:grid;gap:6px;background:var(--panel);padding:0 0 10px;border-bottom:1px solid var(--line);}
+.chat-compose-row{display:flex;gap:6px;align-items:flex-end}
+.chat-compose-row textarea{flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none}
+.chat-messages{flex:1 1 auto;min-height:0;overflow-y:auto;padding:18px 12px 24px;display:flex;flex-direction:column;gap:10px;background:#03080d;border:1px solid var(--line);border-radius:8px;margin-top:10px;scroll-behavior:smooth}
+
+\n.chat-composer-tools{display:flex;gap:6px;align-items:center}\n.chat-tool{width:42px;height:42px;display:grid;place-items:center;padding:0!important}\n.chat-recording{color:var(--danger)!important;border-color:var(--danger)!important;animation:chatPulse 1s infinite}\n.chat-reactions{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}\n.chat-reaction-btn{border:1px solid var(--line);background:#07131c;color:var(--text);border-radius:999px;padding:2px 6px;font-size:13px;cursor:pointer}\n.chat-reaction-list{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}\n.chat-reaction-chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;background:#07131c}\n@keyframes chatPulse{50%{opacity:.45}}
+
 .drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
 .drawer-backdrop.active{display:block}
 
 @media(max-width:850px){
+  .chat-container{grid-template-columns:1fr;min-height:calc(100vh - 210px);height:auto}
+  .chat-users{max-height:150px;min-height:0;border-right:none;border-bottom:1px solid var(--line);padding-bottom:10px}
   .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:20;background:#050b11f5;border-top:1px solid var(--line);padding:7px;gap:5px;overflow:auto}
   .mobile-nav button{flex:1;min-width:72px}
   .top{padding:10px 14px}
-  .top .search{display:none}
   .page{padding:16px 14px 82px}
   .grid{grid-template-columns:1fr}
   .hero{padding:22px}
 }
+.post{contain:content;}
+.post-media img,.post-media video{content-visibility:auto;}
 </style>
 </head>
 <body>
@@ -124,7 +129,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
       <button class="primary" id="authSubmit">ENTER PIXEL FRIENDS</button>
     </form>
     <div class="status" id="authStatus"></div>
-    <button class="secondary" id="demoBtn" style="width:100%;margin-top:12px">CONTINUE IN DEMO MODE</button>
   </div>
 </section>
 
@@ -148,7 +152,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <main class="main">
 <header class="top">
   <button class="menu-btn" id="menuBtn" aria-label="Toggle Menu">☰</button>
-  <div class="brand-mini" id="brandBtn" title="Click to Refresh Page">
+  <div class="brand-mini" id="brandBtn" title="Click to Refresh">
     <div class="brand-icon">◉</div>
     <div>
       <div class="brand-name">PIXEL FRIENDS</div>
@@ -156,18 +160,21 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
     </div>
   </div>
   <div class="spacer"></div>
-  <button class="profile-btn" id="topProfile" aria-label="Profile">
-    <span class="profile-avatar" id="topAvatar">PF</span>
-    <span>Profile</span>
-  </button>
+  <div class="header-actions">
+    <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications"><span style="font-size: 16px;">🔔</span><span class="notif-badge" id="notifBadge">0</span></button>
+    <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
+      <span class="profile-avatar" id="topAvatar">PF</span>
+      <span>Profile</span>
+    </button>
+  </div>
 </header>
 
 <section class="page active" id="home">
   <div class="hero">
     <h1 id="welcome">Welcome, Pixel Friend.</h1>
-    <p>A clean, independent social space built for profiles, friends, posts, messages,and audio playlist.</p>
-    <div class="row"></div>
+    <p>A clean, independent social space built for profiles, friends, posts, messages, and audio playlist.</p>
   </div>
+
   <div class="grid">
     <div>
       <div class="card composer">
@@ -175,8 +182,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
         <textarea id="postText" placeholder="📋 Paste text, 🖼️ screenshots, or copied pictures directly here (Ctrl+V) and video and audio"></textarea>
         
         <input type="file" id="mediaInput" accept="image/*,video/*,audio/*" class="hidden">
-        
         <div id="mediaPreview" class="media-preview"></div>
+        <div id="uploadStatus" style="font-size:12px;color:var(--cyan);margin-top:6px;"></div>
 
         <div class="row" style="margin-top:10px">
           <button class="secondary" id="uploadImgBtn" style="font-size:12px">🖼️ Image</button>
@@ -186,20 +193,18 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
           <button class="primary" style="width:auto" id="postBtn">POST</button>
         </div>
       </div>
-      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div></div></div>
+      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">Loading community feed…</div></div></div>
     </div>
     <div>
-      <div class="card"><h3>Online friends</h3><div class="list"><div class="empty">No friends online yet.</div></div></div>
+      <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center">Online friends <span id="presenceStatus" class="muted" style="font-size:10px;font-weight:600">CONNECTING…</span></h3><div class="list" id="onlineFriendsList"><div class="empty">Connecting to online status…</div></div></div>
     </div>
   </div>
 </section>
 
-<section class="page" id="friends"><h2 class="page-title">Friends</h2><p class="page-sub">Build your own network.</p><div class="card"><div class="empty">You don't have any friends yet. Explore the community to start connecting.</div></div></section>
-<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Private conversations will live here.</p><div class="card"><div class="empty">No conversations yet.</div></div></section>
-<section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Mentions, reactions and friend activity.</p><div class="card"><div class="empty">You're all caught up.</div></div></section>
-<section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Your personal music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
-<section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Your Pixel Friends identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div><hr style="border-color:#142a38;margin:18px 0"><p class="muted">Your profile starts clean. Add your own bio, avatar and interests when profile editing is connected.</p></div></section>
-<section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Control your Pixel Friends experience.</p><div class="card"><div class="stat"><span>Theme</span><b>Cyber</b></div><div class="stat"><span>Data source</span><b>Pixel Friends</b></div><div class="stat"><span>Sample data</span><b>Not imported</b></div></div></section>
+<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" class="chat-header">Select a user to start chatting</div><form id="messageComposer" class="chat-composer"><div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div class="chat-compose-row"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Type a message or paste an image…"></textarea><div class="chat-composer-tools"><button type="button" class="secondary chat-tool" id="chatVoiceBtn" title="Record voice">🎙️</button><button type="button" class="secondary chat-tool" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px;height:42px" type="button" id="sendMessageBtn">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span></form><div class="chat-messages" id="chatMessagesList"><div class="empty">Select a user, then type a message or paste an image with Ctrl+V.</div></div></div></div></div></section>
+<section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
+<section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
+<section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Preferences.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div></div></section>
 </main></div>
 <nav class="mobile-nav" id="mobileNav"></nav>
 </div>
@@ -207,26 +212,39 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <script>
 const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
 const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
-let sb=null, mode="cloud", user=null, posts=[];
+
+let sb=null, user=null, posts=[];
 let currentMedia = null;
+let feedRequest = null;
+let feedTimer = null;
+let realtimeChannel = null;
+let presenceChannel = null;
+let notifications = [];
+const NOTIF_KEY = "pixel_friends_notifications_v1";
+const FEED_CACHE_KEY = "pixel_friends_feed_v1";
+const FEED_LIMIT = 20;
 
 const navItems=[
- ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
- ["notifications","◉","Notifications"],["playlist","♫","Playlist"],
- ["profile","◎","Profile"],["settings","⚙","Settings"]
+  ["home","⌂","Home"],["messages","✉","Messages"],
+  ["notifications","◉","Notifications"],["profile","◎","Profile"],["settings","⚙","Settings"]
 ];
 
 function $(id){return document.getElementById(id)}
-
-/* Refresh page function attached to the brand icon/title */
-function refreshApp(){
-  window.location.reload();
-}
+function refreshApp(){ window.location.reload(); }
 
 $("brandBtn").onclick = refreshApp;
-if($("sideLogo")) $("sideLogo").onclick = refreshApp;
+if($("sideLogo")) $("sideLogo").onclick = () => window.location.reload();
 
-function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
+function initSupabase(){
+  try{
+    if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  }catch(e){ sb=null; }
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function buildNav(){
   for(const host of [$("sideNav"),$("mobileNav")]){
@@ -239,190 +257,998 @@ function buildNav(){
   }
 }
 
-/* Hide & Show Side Drawer Functions */
 function toggleMenu(){
-  const side = $("sideDrawer");
-  const backdrop = $("drawerBackdrop");
-  if(side && backdrop){
-    side.classList.toggle("open");
-    backdrop.classList.toggle("active");
-  }
+  $("sideDrawer")?.classList.toggle("open");
+  $("drawerBackdrop")?.classList.toggle("active");
 }
 
 function closeMenu(){
-  const side = $("sideDrawer");
-  const backdrop = $("drawerBackdrop");
-  if(side && backdrop){
-    side.classList.remove("open");
-    backdrop.classList.remove("active");
-  }
+  $("sideDrawer")?.classList.remove("open");
+  $("drawerBackdrop")?.classList.remove("active");
 }
 
 function showPage(id){
  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+ if(id==='messages'){
+   setupMessages();
+   ensureMessageComposer();
+ }
 }
 
 function displayName(){
- return user?.user_metadata?.display_name || user?.email?.split("@")[0] || localStorage.getItem("pf_demo_name") || "Pixel Friend";
+ return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Pixel Friend";
+}
+
+
+function renderOnlineFriends(){
+  const container=$('onlineFriendsList');
+  if(!container) return;
+  const state=presenceChannel?.presenceState?.() || {};
+  const people=[];
+  Object.entries(state).forEach(([key,entries])=>{
+    (entries||[]).forEach(entry=>{
+      if(!entry || entry.user_id===user?.id) return;
+      const id=entry.user_id || key;
+      if(people.some(p=>p.id===id)) return;
+      people.push({
+        id,
+        name:entry.display_name || entry.user_name || 'Pixel Friend'
+      });
+    });
+  });
+  people.sort((a,b)=>a.name.localeCompare(b.name));
+  const count=people.length;
+  if(!count){
+    container.innerHTML='<div class="empty" style="font-size:12px;padding:12px;">No other Pixel Friends are online right now.</div>';
+    return;
+  }
+  container.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+      <span class="muted" style="font-size:11px">ONLINE NOW</span>
+      <span class="online-count">${count}</span>
+    </div>
+    ${people.slice(0,12).map(person=>{
+      const safeId=esc(person.id), safeName=esc(person.name);
+      const initials=esc(person.name.slice(0,2).toUpperCase());
+      return `<button class="online-user" data-online-user="${safeId}" data-online-name="${safeName}">
+        <span class="online-dot"></span>
+        <span class="online-avatar">${initials}</span>
+        <span class="online-meta"><span class="online-name">${safeName}</span><span class="online-status">Online</span></span>
+      </button>`;
+    }).join('')}
+    ${count>12?`<div class="muted" style="font-size:11px;text-align:center;padding-top:3px">+${count-12} more online</div>`:''}
+  `;
+  container.querySelectorAll('[data-online-user]').forEach(btn=>{
+    btn.onclick=()=>{
+      showPage('messages');
+      closeMenu();
+      openChat(btn.dataset.onlineUser,btn.dataset.onlineName);
+    };
+  });
+}
+
+async function startPresence(force=false){
+  if(!sb || !user) return;
+  const statusEl=$('presenceStatus');
+  const setPresenceStatus=(text,ok=false)=>{
+    if(!statusEl) return;
+    statusEl.textContent=text;
+    statusEl.style.color=ok?'var(--good)':'var(--muted)';
+  };
+
+  // Keep an existing healthy channel. Recreating Presence on every
+  // visibility event causes needless disconnect/reconnect delays.
+  if(presenceChannel && !force){
+    try{
+      await presenceChannel.track({
+        user_id:String(user.id),
+        display_name:displayName(),
+        online_at:new Date().toISOString()
+      });
+      setPresenceStatus('ONLINE',true);
+      renderOnlineFriends();
+      setupMessages();
+      return;
+    }catch(_){ /* recreate below */ }
+  }
+
+  if(presenceChannel){
+    try{ await sb.removeChannel(presenceChannel); }catch(e){}
+    presenceChannel=null;
+  }
+
+  presenceChannel=sb.channel('pixel-friends-presence-v3',{
+    config:{presence:{key:String(user.id)}}
+  });
+
+  presenceChannel
+    .on('presence',{event:'sync'},()=>{
+      setPresenceStatus('ONLINE',true);
+      renderOnlineFriends();
+      setupMessages();
+    })
+    .on('presence',{event:'join'},()=>{renderOnlineFriends();setupMessages();})
+    .on('presence',{event:'leave'},()=>{renderOnlineFriends();setupMessages();})
+    .subscribe(async status=>{
+      if(status==='SUBSCRIBED'){
+        try{
+          await presenceChannel.track({
+            user_id:String(user.id),
+            display_name:displayName(),
+            online_at:new Date().toISOString()
+          });
+          setPresenceStatus('ONLINE',true);
+          renderOnlineFriends();
+        }catch(e){
+          console.error('Presence track failed:',e);
+          setPresenceStatus('TRACK ERROR');
+        }
+      }else if(status==='CHANNEL_ERROR'){
+        setPresenceStatus('ERROR');
+        window.setTimeout(()=>{ if(user && !document.hidden) startPresence(true); },3000);
+      }else if(status==='TIMED_OUT'){
+        setPresenceStatus('TIMEOUT');
+        window.setTimeout(()=>{ if(user && !document.hidden) startPresence(true); },3000);
+      }else if(status==='CLOSED'){
+        setPresenceStatus('OFFLINE');
+      }
+    });
+
+  if(!window.__pfPresenceWakeBound){
+    window.__pfPresenceWakeBound=true;
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible' && user) startPresence(false);
+    });
+    window.addEventListener('online',()=>{ if(user) startPresence(false); });
+  }
 }
 
 function openApp(){
- $("auth").classList.add("hidden");$("app").style.display="block";$("sideName").textContent=displayName();
+ $("auth").classList.add("hidden");
+ $("app").style.display="block";
+ $("sideName").textContent=displayName();
  $("welcome").textContent=`Welcome, ${displayName()}.`;
- $("profileName").textContent=displayName();$("profileEmail").textContent=user?.email||"Demo account";
- $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();$("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
- renderFeed();showPage("home");
+ $("profileName").textContent=displayName();
+ $("profileEmail").textContent=user?.email||"";
+ $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();
+ $("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
+ 
+ showPage("home");
+ renderOnlineFriends();
+ loadFeedCache();
+ // Presence is independent from the feed: it updates the Online friends card instantly.
+ startPresence();
+ // Load server notifications only after the authenticated user is known.
+ loadNotifications();
+ requestAnimationFrame(() => { loadPosts(true); startFeedUpdates(); });
 }
 
-function closeApp(){ $("app").style.display="none";$("auth").classList.remove("hidden"); }
 function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
 
 let register=false;
 $("loginTab").onclick=()=>{register=false;syncAuthMode()};
 $("registerTab").onclick=()=>{register=true;syncAuthMode()};
 
-function syncAuthMode(){$("loginTab").classList.toggle("active",!register);$("registerTab").classList.toggle("active",register);$("nameField").classList.toggle("hidden",!register);$("authSubmit").textContent=register?"CREATE PIXEL FRIENDS ACCOUNT":"ENTER PIXEL FRIENDS";$("authStatus").textContent=""}
+function syncAuthMode(){
+  $("loginTab").classList.toggle("active",!register);
+  $("registerTab").classList.toggle("active",register);
+  $("nameField").classList.toggle("hidden",!register);
+  $("authSubmit").textContent=register?"CREATE PIXEL FRIENDS ACCOUNT":"ENTER PIXEL FRIENDS";
+  $("authStatus").textContent="";
+}
 
 $("authForm").onsubmit=async e=>{
- e.preventDefault();setStatus("Connecting…",false);
- const email=$("email").value.trim(),password=$("password").value,display=$("displayName").value.trim();
- if(!sb){setStatus("Cloud authentication is unavailable. Use Demo Mode.");return}
+ e.preventDefault();
+ setStatus("Authenticating instantly…",false);
+ const email=$("email").value.trim(), password=$("password").value, display=$("displayName").value.trim();
+ if(!sb){setStatus("Cloud authentication is unavailable.");return}
+ 
  try{
   if(register){
    const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:display||email.split("@")[0]}}});
    if(error)throw error;
-   if(data.session){user=data.user;openApp()}else setStatus("Account created. Check your email to confirm your account.",false);
+   if(data.session){user=data.user;openApp();}else setStatus("Account created. Check your email to confirm.",false);
   }else{
-   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;user=data.user;mode="cloud";openApp();
+   const {data,error}=await sb.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   user=data.user;
+   openApp();
   }
  }catch(err){setStatus(err?.message||"Authentication failed.")}
 };
 
-$("demoBtn").onclick=()=>{mode="demo";user={id:"demo-"+Date.now(),email:"demo@pixelfriends.local",user_metadata:{display_name:"Pixel Friend"}};localStorage.setItem("pf_demo_name","Pixel Friend");openApp()};
-
 $("logout").onclick=async()=>{
-  if(mode==="cloud"&&sb)try{await sb.auth.signOut()}catch(e){}
+  try{
+    if(presenceChannel && sb){ await sb.removeChannel(presenceChannel); }
+  }catch(e){}
+  presenceChannel=null;
+  if(sb)try{await sb.auth.signOut()}catch(e){}
   user=null;
+  posts=[];
   closeMenu();
-  closeApp();
+  $("app").style.display="none";
+  $("auth").classList.remove("hidden");
 };
 
-$("topProfile").onclick=()=>{showPage("profile");closeMenu()};
+$("topBell").onclick = () => { showPage("notifications"); markNotificationsRead(); closeMenu(); };
+$("topProfile").onclick = () => { showPage("profile"); closeMenu(); };
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
 
-/* File & Clipboard Handling */
-function setMediaFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    let type = 'image';
-    if (file.type.startsWith('video/')) type = 'video';
-    else if (file.type.startsWith('audio/')) type = 'audio';
-    
-    currentMedia = { type, src: e.target.result };
-    renderMediaPreview();
-  };
-  reader.readAsDataURL(file);
+async function prepareMedia(file) {
+  if (!file) return null;
+  let type = 'image';
+  if (file.type.startsWith('video/')) type = 'video';
+  else if (file.type.startsWith('audio/')) type = 'audio';
+  if (type === 'image' && !/image\/gif|image\/svg\+xml/i.test(file.type) && file.size > 350 * 1024) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const ctx = canvas.getContext('2d', {alpha:false});
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close?.();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
+      if (blob && blob.size < file.size) file = new File([blob], 'image.webp', {type:'image/webp'});
+    } catch (e) { console.warn('Image compression skipped:', e); }
+  }
+  return {file, type};
+}
+
+async function setMediaFile(file) {
+  if (!file || !sb) return;
+  const prepared = await prepareMedia(file);
+  if (!prepared) return;
+  const {file: uploadFile, type} = prepared;
+  $('uploadStatus').textContent = 'Uploading media…';
+  const ext = uploadFile.name.split('.').pop() || 'bin';
+  const safeName = `media_${crypto.randomUUID?.() || (Date.now()+'_'+Math.random().toString(36).slice(2,8))}.${ext}`;
+  const { error } = await sb.storage.from('post-media').upload(safeName, uploadFile, {contentType: uploadFile.type || undefined, cacheControl:'31536000', upsert:false});
+  if (error) { $('uploadStatus').textContent = 'Upload failed: ' + error.message; return; }
+  const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
+  currentMedia = {type, src: publicUrlData.publicUrl, path: safeName};
+  $('uploadStatus').textContent = 'Ready!';
+  renderMediaPreview();
+}
+function normalizeMedia(media){
+  if(!media) return null;
+  if(typeof media === 'string'){
+    try{ media=JSON.parse(media); }catch(e){ return {type:'audio',src:media}; }
+  }
+  if(typeof media !== 'object') return null;
+  const type = media.type || media.mime_type?.split('/')[0] || 'audio';
+  return {...media, type, src:media.src || media.url || media.publicUrl || ''};
+}
+
+function mediaPathFromUrl(src){
+  try{
+    const marker='/storage/v1/object/public/post-media/';
+    const signedMarker='/storage/v1/object/sign/post-media/';
+    if(src.includes(marker)) return decodeURIComponent(src.split(marker)[1].split('?')[0]);
+    if(src.includes(signedMarker)) return decodeURIComponent(src.split(signedMarker)[1].split('?')[0]);
+  }catch(e){}
+  return null;
+}
+
+async function getSignedMediaUrl(media){
+  const m=normalizeMedia(media);
+  const path=m?.path || mediaPathFromUrl(m?.src||'');
+  if(!sb || !path) return null;
+  try{
+    const {data,error}=await sb.storage.from('post-media').createSignedUrl(path,3600);
+    return error ? null : data?.signedUrl || null;
+  }catch(e){ return null; }
+}
+
+async function recoverMediaElement(el){
+  if(!el || el.dataset.recovered==='1') return;
+  el.dataset.recovered='1';
+  const media=normalizeMedia({src:el.currentSrc || el.src,type:el.dataset.mediaType,path:el.dataset.mediaPath});
+  const signed=await getSignedMediaUrl(media);
+  if(signed && signed!==el.src){
+    el.dataset.recovered='2';
+    el.src=signed;
+    try{ el.load(); }catch(e){}
+  }else{
+    const holder=el.closest('.post-media');
+    if(holder && !holder.querySelector('.media-error')){
+      const msg=document.createElement('div');
+      msg.className='media-error muted';
+      msg.textContent='Media could not be loaded. Check the post-media storage bucket permissions.';
+      holder.appendChild(msg);
+    }
+  }
+}
+
+function attachMediaRecovery(){
+  document.querySelectorAll('#feed audio[data-media], #feed video[data-media]').forEach(el=>{
+    el.addEventListener('error',()=>recoverMediaElement(el),{once:true});
+  });
 }
 
 function renderMediaPreview() {
   const container = $("mediaPreview");
-  if (!currentMedia) {
-    container.innerHTML = "";
-    return;
-  }
+  if (!currentMedia) { container.innerHTML = ""; return; }
   let mediaHtml = "";
-  if (currentMedia.type === 'image') {
-    mediaHtml = `<img src="${currentMedia.src}">`;
-  } else if (currentMedia.type === 'video') {
-    mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
-  } else if (currentMedia.type === 'audio') {
-    mediaHtml = `<audio src="${currentMedia.src}" controls></audio>`;
-  }
-  
-  container.innerHTML = `
-    <div class="preview-item">
-      ${mediaHtml}
-      <button class="remove-btn" onclick="removeMedia()">✕</button>
-    </div>
-  `;
+  if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}" loading="lazy" decoding="async">`;
+  else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls preload="metadata" playsinline></video>`;
+  else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls preload="metadata"></audio>`;
+  container.innerHTML = `<div class="preview-item">${mediaHtml}<button class="remove-btn" onclick="currentMedia=null;renderMediaPreview()">✕</button></div>`;
 }
 
-function removeMedia() {
-  currentMedia = null;
-  renderMediaPreview();
-}
-
-/* Handle Paste Event (Ctrl+V) */
 $("postText").addEventListener("paste", (e) => {
   const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-  for (let item of items) {
-    if (item.kind === 'file') {
-      const blob = item.getAsFile();
-      setMediaFile(blob);
-    }
-  }
+  for (let item of items) { if (item.kind === 'file') setMediaFile(item.getAsFile()); }
 });
 
-/* Trigger File Inputs */
 $("uploadImgBtn").onclick = () => { $("mediaInput").accept = "image/*"; $("mediaInput").click(); };
 $("uploadVidBtn").onclick = () => { $("mediaInput").accept = "video/*"; $("mediaInput").click(); };
 $("uploadAudBtn").onclick = () => { $("mediaInput").accept = "audio/*"; $("mediaInput").click(); };
+$("mediaInput").onchange = (e) => { if (e.target.files && e.target.files[0]) setMediaFile(e.target.files[0]); };
 
-$("mediaInput").onchange = (e) => {
-  if (e.target.files && e.target.files[0]) {
-    setMediaFile(e.target.files[0]);
+$("postBtn").onclick = async () => {
+  const text = $("postText").value.trim();
+  if (!text && !currentMedia) return;
+  if (!sb || !user) return;
+  const btn = $("postBtn");
+  btn.disabled = true;
+  btn.textContent = "POSTING…";
+
+  const now = new Date().toISOString();
+  const tempId = "temp-" + Date.now();
+  const optimisticPost = {
+    id: tempId, user_id: user.id, user_name: displayName(), text: text || null,
+    media: currentMedia ? {...currentMedia} : null, created_at: now,
+    likes_users: [], likes_count: 0, comments: [], _pending: true
+  };
+  posts = [optimisticPost, ...posts].slice(0, FEED_LIMIT);
+  const feed=$('feed');
+  const empty=feed.querySelector('.empty'); if(empty) empty.remove();
+  feed.insertAdjacentHTML('afterbegin',renderSinglePost(optimisticPost));
+  attachMediaRecovery();
+  $("postText").value = "";
+  currentMedia = null;
+  $("uploadStatus").textContent = "";
+  renderMediaPreview();
+
+  try {
+    const {data, error} = await sb.from('posts').insert([{
+      user_id:user.id, user_name:displayName(), text:text||null, media:optimisticPost.media
+    }]).select('id,user_id,user_name,text,media,created_at').single();
+    if (error) throw error;
+    const saved = {...data, likes_users:[], likes_count:0, comments:[]};
+    const pos = posts.findIndex(p => p.id === tempId);
+    posts = posts.map(p => p.id === tempId ? saved : p);
+    const tempEl=postElement(tempId);
+    if(tempEl) tempEl.outerHTML=renderSinglePost(saved); else renderFeed();
+    attachMediaRecovery();
+    saveFeedCache();
+    window.setTimeout(()=>loadPosts(true),1200);
+  } catch (err) {
+    posts = posts.filter(p => p.id !== tempId);
+    renderFeed();
+    alert("Failed to post: " + (err?.message || "Unknown error"));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "POST";
   }
 };
 
-/* Create Post */
-$("postBtn").onclick=()=>{
- const text=$("postText").value.trim();
- if(!text && !currentMedia) return;
- 
- posts.unshift({
-   id: Date.now(),
-   name: displayName(),
-   text: text,
-   media: currentMedia ? { ...currentMedia } : null,
-   created: new Date()
- });
- 
- $("postText").value = "";
- currentMedia = null;
- renderMediaPreview();
- renderFeed();
-};
-
-function renderFeed(){
- const f=$("feed");if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
- f.innerHTML=posts.map(p=>{
-   let mediaHtml = '';
-   if(p.media){
-     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
-     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
-     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
-   }
-   return `<article class="post">
-     <div class="post-head">
-       <div class="avatar">${esc(p.name.slice(0,2).toUpperCase())}</div>
-       <div><b>${esc(p.name)}</b><div class="muted">Just now</div></div>
-     </div>
-     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
-     ${mediaHtml}
-     <div class="row" style="margin-top:10px">
-       <button class="secondary">♡ Like</button>
-       <button class="secondary">▢ Comment</button>
-     </div>
-   </article>`;
- }).join("")
+function saveFeedCache(){
+  try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0,FEED_LIMIT))); } catch(e) {}
+}
+function loadFeedCache(){
+  try {
+    const cached=JSON.parse(localStorage.getItem(FEED_CACHE_KEY)||"[]");
+    if(Array.isArray(cached)&&cached.length){ posts=cached; renderFeed(); return true; }
+  } catch(e) {}
+  return false;
+}
+function scheduleFeedRefresh(delay=700){
+  clearTimeout(feedTimer);
+  feedTimer=setTimeout(()=>loadPosts(true),delay);
 }
 
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function loadPosts(background=false){
+  if(!sb || !user) return;
+  if(feedRequest) return feedRequest;
+  const feed=$('feed');
+  if(!background && !posts.length) feed.innerHTML='<div class="empty">Loading community feed…</div>';
+  feedRequest=(async()=>{
+    try{
+      const {data:rows,error}=await sb.from('posts')
+        .select('id,user_id,user_name,text,media,created_at')
+        .order('created_at',{ascending:false}).limit(FEED_LIMIT);
+      if(error) throw error;
+      const list=rows||[];
+      if(!list.length){
+        const pending=posts.filter(p=>p._pending);
+        posts=pending; renderFeed(); setupMessages(); saveFeedCache(); return;
+      }
+      const ids=list.map(p=>p.id);
+      const [likesRes,commentsRes]=await Promise.all([
+        sb.from('likes').select('post_id,user_id').in('post_id',ids),
+        sb.from('comments').select('id,post_id,user_id,user_name,content,created_at').in('post_id',ids).order('created_at',{ascending:true}).limit(150)
+      ]);
+      if(likesRes.error) throw likesRes.error;
+      if(commentsRes.error) throw commentsRes.error;
+      const likes=new Map(), comments=new Map();
+      (likesRes.data||[]).forEach(x=>{if(!likes.has(x.post_id))likes.set(x.post_id,[]);likes.get(x.post_id).push(x.user_id)});
+      (commentsRes.data||[]).forEach(x=>{if(!comments.has(x.post_id))comments.set(x.post_id,[]);comments.get(x.post_id).push(x)});
+      const fresh=list.map(p=>({...p,media:normalizeMedia(p.media),likes_users:likes.get(p.id)||[],likes_count:(likes.get(p.id)||[]).length,comments:comments.get(p.id)||[]}));
+      // Preserve any local optimistic operations that are still waiting for Supabase.
+      const pending=posts.filter(p=>p._pending && !fresh.some(x=>x.id===p.id));
+      posts=[...pending,...fresh].slice(0,FEED_LIMIT);
+      renderFeed(); setupMessages(); saveFeedCache();
+    }catch(err){
+      console.error('Feed refresh failed:',err);
+      if(!posts.length) feed.innerHTML='<div class="empty">Could not load the community feed. Please try again.</div>';
+    }finally{feedRequest=null;}
+  })();
+  return feedRequest;
+}
 
-buildNav();initSupabase();
-(async()=>{if(sb){try{const {data}=await sb.auth.getSession();if(data.session){user=data.session.user;mode="cloud";openApp()}}catch(e){}}})();
+function upsertRealtimePost(row){
+  if(!row?.id) return;
+  const existing=posts.find(p=>p.id===row.id);
+  if(existing){
+    Object.assign(existing,row,{media:normalizeMedia(row.media)});
+  }else{
+    posts=[{...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]},...posts.filter(p=>!p._pending)].slice(0,FEED_LIMIT);
+  }
+  saveFeedCache(); renderFeed();
+}
+
+function applyRealtimeLike(payload){
+  const row=payload?.new || payload?.old;
+  const post=posts.find(p=>p.id===row?.post_id);
+  if(!post || !row) return;
+  const uid=row.user_id;
+  const users=new Set(post.likes_users||[]);
+  if(payload.eventType==='INSERT') users.add(uid); else users.delete(uid);
+  post.likes_users=[...users];
+  post.likes_count=post.likes_users.length;
+  updatePostDom(post);
+  saveFeedCache();
+}
+
+function applyRealtimeComment(payload){
+  const row=payload?.new || payload?.old;
+  const post=posts.find(p=>p.id===row?.post_id);
+  if(!post || !row) return;
+  post.comments=post.comments||[];
+  if(payload.eventType==='INSERT'){
+    if(!post.comments.some(c=>c.id===row.id)){
+      const idx=post.comments.findIndex(c=>c._pending && c.user_id===row.user_id && c.content===row.content);
+      if(idx>=0) post.comments[idx]=row; else post.comments.push(row);
+    }
+  }else if(payload.eventType==='UPDATE'){
+    const idx=post.comments.findIndex(c=>c.id===row.id); if(idx>=0) post.comments[idx]=row;
+  }else if(payload.eventType==='DELETE'){
+    post.comments=post.comments.filter(c=>c.id!==row.id);
+  }
+  post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  updatePostDom(post);
+  saveFeedCache();
+}
+
+async function loadNotifications(){
+  if(!user || !sb){ renderNotifications(); return; }
+  try{
+    const {data,error}=await sb.from('notifications')
+      .select('id,user_id,type,title,message,is_read,read,created_at,target_id')
+      .eq('user_id',user.id)
+      .order('created_at',{ascending:false})
+      .limit(50);
+    if(error) throw error;
+    notifications=(data||[]).map(n=>({
+      id:n.id,
+      type:n.type,
+      title:n.title,
+      text:n.message || n.title || 'New activity',
+      created_at:n.created_at,
+      read:Boolean(n.is_read ?? n.read),
+      target_id:n.target_id
+    }));
+    saveNotifications();
+  }catch(e){
+    // Keep cached notifications available if the network is temporarily unavailable.
+    try{ notifications=JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]'); }catch(_){ notifications=[]; }
+  }
+  renderNotifications();
+}
+function saveNotifications(){
+  try{ localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications.slice(0,50))); }catch(e){}
+}
+function notificationFromRow(row){
+  if(!row) return null;
+  return {
+    id:row.id,
+    type:row.type||'activity',
+    title:row.title||'New activity',
+    text:row.message||row.title||'New activity',
+    created_at:row.created_at||new Date().toISOString(),
+    read:Boolean(row.is_read ?? row.read),
+    target_id:row.target_id||null
+  };
+}
+function mergeServerNotification(row){
+  if(!row || !user || row.user_id!==user.id) return;
+  const n=notificationFromRow(row); if(!n)return;
+  const idx=notifications.findIndex(x=>String(x.id)===String(n.id));
+  if(idx>=0) notifications[idx]=n; else notifications.unshift(n);
+  notifications=notifications.slice(0,50);
+  saveNotifications();
+  renderNotifications();
+  if(!n.read && $('topBell')){
+    $('topBell').animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:350});
+  }
+}
+function renderNotifications(){
+  const unread=notifications.filter(n=>!n.read).length;
+  const badge=$('notifBadge');
+  if(badge){badge.textContent=unread>99?'99+':String(unread);badge.style.display=unread?'flex':'none';}
+  const list=$('notificationList'); if(!list)return;
+  if(!notifications.length){list.innerHTML='<div class="empty">You’re all caught up.</div>';return;}
+  list.innerHTML=notifications.map(n=>`<div class="comment-item" data-notification-id="${esc(n.id)}" style="padding:12px;border:1px solid var(--line);background:${n.read?'#07111a':'#0a1d28'}"><div><b>${esc(n.title||n.text)}</b><div style="margin-top:3px">${esc(n.text||'')}</div><div class="muted" style="margin-top:3px;font-size:11px">${esc(new Date(n.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div></div>`).join('');
+}
+async function markNotificationsRead(){
+  const unreadIds=notifications.filter(n=>!n.read).map(n=>n.id).filter(Boolean);
+  notifications=notifications.map(n=>({...n,read:true}));
+  saveNotifications(); renderNotifications();
+  if(!sb || !user || !unreadIds.length)return;
+  try{
+    await sb.from('notifications').update({is_read:true,read:true}).eq('user_id',user.id).in('id',unreadIds);
+  }catch(e){ console.warn('Could not mark notifications read:',e); }
+}
+
+function subscribeToFeed(){
+  if(!sb || !user || realtimeChannel)return;
+  try{
+    realtimeChannel=sb.channel('pixel-friends-live-v5')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>{
+        const row=payload.new; if(!row?.id || posts.some(x=>x.id===row.id))return;
+        const pendingIndex=posts.findIndex(x=>x._pending && x.user_id===row.user_id && (x.text||null)===(row.text||null));
+        const fresh={...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]};
+        const feed=$('feed');
+        const empty=feed.querySelector('.empty'); if(empty)empty.remove();
+        if(pendingIndex>=0){
+          const oldId=posts[pendingIndex].id;
+          posts[pendingIndex]=fresh;
+          const oldEl=postElement(oldId);
+          if(oldEl) oldEl.outerHTML=renderSinglePost(fresh);
+          else feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
+        }else{
+          posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
+          feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
+        }
+        attachMediaRecovery(); saveFeedCache();
+      })
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>{
+        const post=postById(payload.new?.id); if(!post)return;
+        Object.assign(post,payload.new,{media:normalizeMedia(payload.new.media)});
+        const el=postElement(post.id); if(el)el.outerHTML=renderSinglePost(post);
+        attachMediaRecovery(); saveFeedCache();
+      })
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},payload=>{
+        const id=payload.old?.id; posts=posts.filter(x=>x.id!==id); postElement(id)?.remove(); saveFeedCache();
+      })
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},applyRealtimeComment)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},applyRealtimeComment)
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},applyRealtimeComment)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`sender_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
+      .subscribe(status=>{
+        window.__pfRealtimeReady=status==='SUBSCRIBED';
+        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; fallback polling active.');
+      });
+  }catch(e){console.warn('Realtime setup failed:',e);}
+}
+function startFeedUpdates(){
+  subscribeToFeed();
+  clearInterval(window.__pfFeedPoll);
+  window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},8000);
+}
+
+function commentHtml(c){
+  const name=esc(c?.user_name||'Pixel Friend');
+  const text=esc(c?.content||'');
+  const id=c?.id?esc(c.id):'';
+  return `<div class="comment-item" data-comment-id="${id}"><div><b>${name}:</b> ${text}</div></div>`;
+}
+
+function postById(id){
+  return posts.find(p=>String(p.id)===String(id)) || null;
+}
+function postElement(id){
+  if(!id) return null;
+  return document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`);
+}
+
+async function handleLike(postId){
+  const post=postById(postId);
+  if(!post || !user || !sb || post._likeBusy) return;
+  post._likeBusy=true;
+  const wasLiked=(post.likes_users||[]).includes(user.id);
+  const users=new Set(post.likes_users||[]);
+  if(wasLiked) users.delete(user.id); else users.add(user.id);
+  post.likes_users=[...users];
+  post.likes_count=post.likes_users.length;
+  updatePostDom(post);
+
+  try{
+    if(wasLiked){
+      const {error}=await sb.from('likes').delete().eq('post_id',postId).eq('user_id',user.id);
+      if(error) throw error;
+    }else{
+      const {error}=await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);
+      if(error) throw error;
+    }
+    saveFeedCache();
+  }catch(err){
+    const rollback=new Set(post.likes_users||[]);
+    if(wasLiked) rollback.add(user.id); else rollback.delete(user.id);
+    post.likes_users=[...rollback];
+    post.likes_count=post.likes_users.length;
+    updatePostDom(post);
+    console.warn('Like failed:',err);
+  }finally{
+    post._likeBusy=false;
+  }
+}
+
+async function handleAddComment(postId,event){
+  event?.preventDefault();
+  const post=postById(postId);
+  if(!post || !user || !sb || post._commentBusy) return;
+  const input=$(`comment-input-${postId}`);
+  const text=input?.value.trim()||'';
+  if(!text) return;
+  post._commentBusy=true;
+  const tempId=`temp-comment-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+  const optimistic={id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
+  post.comments=post.comments||[];
+  post.comments.push(optimistic);
+  if(input) input.value='';
+  updatePostDom(post);
+
+  try{
+    const {data,error}=await sb.from('comments').insert([{
+      post_id:postId,user_id:user.id,user_name:displayName(),content:text
+    }]).select('id,post_id,user_id,user_name,content,created_at').single();
+    if(error) throw error;
+    const i=post.comments.findIndex(c=>c.id===tempId);
+    if(i>=0) post.comments[i]={...data};
+    else if(!post.comments.some(c=>c.id===data.id)) post.comments.push(data);
+    updatePostDom(post);
+    saveFeedCache();
+  }catch(err){
+    post.comments=post.comments.filter(c=>c.id!==tempId);
+    updatePostDom(post);
+    if(input) input.value=text;
+    console.warn('Comment failed:',err);
+  }finally{
+    post._commentBusy=false;
+  }
+}
+
+function updatePostDom(post){
+  const el=postElement(post?.id); if(!el) return;
+  const likeBtn=el.querySelector('[data-action="like"]');
+  if(likeBtn){
+    const liked=(post.likes_users||[]).includes(user?.id);
+    likeBtn.classList.toggle('liked',liked);
+    const count=likeBtn.querySelector('[data-like-count]');
+    if(count) count.textContent=String(post.likes_count||0);
+  }
+  const commentsBox=el.querySelector('[data-comments]');
+  const count=el.querySelector('[data-comment-count]');
+  if(commentsBox) commentsBox.innerHTML=(post.comments||[]).map(commentHtml).join('');
+  if(count) count.textContent=String((post.comments||[]).length);
+}
+
+function renderFeed(){
+ const f=$('feed');if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
+ f.innerHTML=posts.map(p=>{
+  const name=p.user_name||'Pixel Friend';const postDate=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now';const media=normalizeMedia(p.media);let mediaHtml='';
+  if(media?.src){const path=media.path?esc(media.path):'';if(media.type==='image')mediaHtml=`<div class="post-media"><img src="${esc(media.src)}" loading="lazy" decoding="async"></div>`;else if(media.type==='video')mediaHtml=`<div class="post-media"><video src="${esc(media.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(media.type==='audio')mediaHtml=`<div class="post-media"><audio src="${esc(media.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}
+  const liked=(p.likes_users||[]).includes(user?.id);
+  return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(postDate)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${mediaHtml}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`
+ }).join('');attachMediaRecovery();
+}
+
+function setupMessages(){
+ const list=$('chatUsersList');if(!list||!sb||!user)return;
+ const people=new Map();
+ // Users who are currently online are always available to start a chat.
+ const state=presenceChannel?.presenceState?.() || {};
+ Object.entries(state).forEach(([key,entries])=>{
+   (entries||[]).forEach(entry=>{
+     const id=String(entry?.user_id||key);
+     if(id && id!==String(user.id) && !people.has(id)) people.set(id,entry.display_name||entry.user_name||'Pixel Friend');
+   });
+ });
+ // Also include users we know from the feed, so Messages can be started even if they are offline.
+ (posts||[]).forEach(p=>{
+   if(p.user_id && p.user_id!==user.id && !people.has(String(p.user_id))) people.set(String(p.user_id),p.user_name||'Pixel Friend');
+ });
+ const arr=[...people.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+ list.innerHTML=arr.length?arr.slice(0,50).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between"><span>💬 ${esc(name)}</span><span class="muted" style="font-size:10px">Chat</span></button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet. Ask a friend to log in or publish a post.</div>';
+ list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
+}
+let activeChat=null;
+let chatRecorder=null;
+let chatRecordChunks=[];
+let chatRecordingStream=null;
+function parseMessageContent(content){
+  if(!content) return {kind:'text',text:''};
+  try{
+    const x=JSON.parse(content);
+    if(x && (x.kind==='text' || x.kind==='media' || x.kind==='mixed')) return x;
+  }catch(e){}
+  return {kind:'text',text:String(content)};
+}
+function messageBubble(m, reactionMap){
+  const mine=String(m.sender_id)===String(user?.id);
+  const c=parseMessageContent(m.content);
+  if(c.kind==='reaction') return '';
+  let body='';
+  if(c.text) body+=`<div style="white-space:pre-wrap;word-break:break-word">${esc(c.text)}</div>`;
+  if(c.media?.src){
+    const src=esc(c.media.src), type=esc(c.media.type||'');
+    if(type==='image') body+=`<div style="margin-top:${c.text?'8px':'0'}"><img src="${src}" loading="lazy" style="max-width:min(360px,100%);max-height:320px;object-fit:contain;border-radius:8px;border:1px solid var(--line);display:block"></div>`;
+    else if(type==='video') body+=`<div style="margin-top:${c.text?'8px':'0'}"><video src="${src}" controls preload="metadata" playsinline style="max-width:min(420px,100%);max-height:320px;border-radius:8px;display:block"></video></div>`;
+    else if(type==='audio') body+=`<div style="margin-top:${c.text?'8px':'0'}"><audio src="${src}" controls preload="metadata" style="width:min(420px,100%);display:block"></audio></div>`;
+    else body+=`<a href="${src}" target="_blank" rel="noopener" style="color:var(--cyan)">📎 Open attachment</a>`;
+  }
+  const reactions=(reactionMap&&reactionMap[m.id])||[];
+  const reactionHtml=reactions.length?`<div class="chat-reaction-list">${reactions.map(r=>`<span class="chat-reaction-chip">${esc(r.emoji)} ${esc(r.name||'')}</span>`).join('')}</div>`:'';
+  const quick=['❤️','👍','😂','😮','😢','🔥'];
+  const quickHtml=`<div class="chat-reactions">${quick.map(e=>`<button type="button" class="chat-reaction-btn" onclick="reactToMessage('${esc(m.id)}','${e}')">${e}</button>`).join('')}</div>`;
+  return `<div data-message-id="${esc(m.id)}" style="align-self:${mine?'flex-end':'flex-start'};max-width:82%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:${mine?'#0a1d28':'#08131c'}"><div>${body||'<span class="muted">Attachment</span>'}</div>${reactionHtml}${quickHtml}<div class="muted" style="font-size:10px;margin-top:4px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`;
+}
+async function loadActiveChatMessages(){
+  if(!activeChat||!sb||!user)return;
+  const box=$('chatMessagesList'); if(!box)return;
+  const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);
+  if(error) throw error;
+  const rows=data||[];
+  const reactionMap={};
+  rows.forEach(m=>{
+    const c=parseMessageContent(m.content);
+    if(c.kind==='reaction' && c.target_id){
+      (reactionMap[c.target_id] ||= []).push({emoji:c.emoji||'❤️',name:c.name||((String(m.sender_id)===String(user.id))?'You':'')});
+    }
+  });
+  const normal=rows.filter(m=>parseMessageContent(m.content).kind!=='reaction');
+  box.innerHTML=normal.map(m=>messageBubble(m,reactionMap)).join('')||'<div class="empty">No messages yet. Send a message below.</div>';
+  box.scrollTop=box.scrollHeight;
+}
+async function reactToMessage(messageId, emoji){
+  if(!activeChat||!sb||!user)return;
+  try{
+    const payload={kind:'reaction',target_id:String(messageId),emoji:String(emoji),name:displayName()};
+    const {error}=await sb.from('messages').insert({sender_id:user.id,recipient_id:activeChat.id,content:JSON.stringify(payload)});
+    if(error)throw error;
+    await loadActiveChatMessages();
+  }catch(err){
+    const status=$('messageSendStatus');
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Reaction failed: '+(err?.message||'Unable to react');}
+  }
+}
+
+async function uploadChatFile(file){
+  if(!file || !sb) return null;
+  const ext=(file.name||'attachment').split('.').pop() || (file.type.split('/')[1]||'bin');
+  const safeName=`chat_${crypto.randomUUID?.() || (Date.now()+'_'+Math.random().toString(36).slice(2,8))}.${ext}`;
+  const {error}=await sb.storage.from('post-media').upload(safeName,file,{contentType:file.type||undefined,cacheControl:'31536000',upsert:false});
+  if(error) throw error;
+  const {data}=sb.storage.from('post-media').getPublicUrl(safeName);
+  return {type:file.type?.startsWith('image/')?'image':file.type?.startsWith('video/')?'video':file.type?.startsWith('audio/')?'audio':'file',src:data.publicUrl,path:safeName,name:file.name||safeName};
+}
+function setChatAttachment(file){
+  if(!file) return;
+  const allowed=file.type?.startsWith('image/')||file.type?.startsWith('video/')||file.type?.startsWith('audio/');
+  if(!allowed){$('messageSendStatus').textContent='Please choose an image, video, or audio file.';$('messageSendStatus').style.display='inline';return;}
+  window.__chatAttachment=file;
+  const preview=$('chatAttachmentPreview');
+  if(preview){
+    const url=URL.createObjectURL(file);
+    const kind=file.type.startsWith('image/')?'🖼️':file.type.startsWith('video/')?'🎥':'🎵';
+    preview.innerHTML=`<span>${kind} ${esc(file.name||'Pasted file')}</span><button type="button" class="secondary" style="padding:3px 7px" onclick="clearChatAttachment()">✕</button>`;
+    preview.dataset.url=url;
+  }
+}
+function clearChatAttachment(){
+  const preview=$('chatAttachmentPreview');
+  if(preview?.dataset.url) URL.revokeObjectURL(preview.dataset.url);
+  window.__chatAttachment=null;
+  if(preview) preview.innerHTML='';
+  const fi=$('chatFileInput');if(fi)fi.value='';
+}
+function handleChatPaste(e){
+  const items=[...(e.clipboardData?.items||[])];
+  const fileItem=items.find(i=>i.kind==='file' && /^(image|video|audio)\//i.test(i.type||''));
+  if(fileItem){
+    const file=fileItem.getAsFile();
+    if(file){
+      e.preventDefault();
+      setChatAttachment(file);
+      const status=$('messageSendStatus');
+      if(status){status.style.display='inline';status.style.color='var(--good)';status.textContent='Pasted attachment ready — press Send.';}
+      return;
+    }
+  }
+}
+
+async function openChat(uid,name){
+  ensureMessageComposer();
+  activeChat={id:String(uid),name};
+  $('chatHeader').innerHTML='💬 '+esc(name)+' <span class="muted" style="font-size:11px;font-weight:400">— conversation</span>';
+  const input=$('messageInput');if(input)input.placeholder='Type a message or paste an image…';
+  const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';
+  if(!sb)return;
+  try{
+    await loadActiveChatMessages();
+  }catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}
+  ensureMessageComposer();
+}
+function ensureMessageComposer(){
+  const form=$('messageComposer'), input=$('messageInput'), attachBtn=$('chatAttachBtn'), fileInput=$('chatFileInput'), sendBtn=$('sendMessageBtn'), voiceBtn=$('chatVoiceBtn');
+  if(!form || !input || !attachBtn || !fileInput || !sendBtn) return;
+  if(form.dataset.ready==='1') return;
+  form.dataset.ready='1';
+
+  attachBtn.onclick=()=>fileInput.click();
+  fileInput.onchange=e=>{ const f=e.target.files?.[0]; if(f) setChatAttachment(f); };
+  input.addEventListener('paste', handleChatPaste);
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+  });
+  sendBtn.onclick=sendChatMessage;
+  if(voiceBtn) voiceBtn.onclick=toggleChatVoiceRecording;
+}
+
+async function toggleChatVoiceRecording(){
+  const btn=$('chatVoiceBtn'), status=$('messageSendStatus');
+  if(chatRecorder && chatRecorder.state==='recording'){
+    chatRecorder.stop();
+    if(status){status.style.display='inline';status.style.color='var(--muted)';status.textContent='Finishing voice recording…';}
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder){
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Voice recording is not supported by this browser.';}
+    return;
+  }
+  if(!activeChat){
+    if(status){status.style.display='inline';status.style.color='var(--muted)';status.textContent='Select a person first.';}
+    return;
+  }
+  try{
+    chatRecordingStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'');
+    chatRecordChunks=[];
+    chatRecorder=new MediaRecorder(chatRecordingStream,mime?{mimeType:mime}:undefined);
+    chatRecorder.ondataavailable=e=>{if(e.data?.size)chatRecordChunks.push(e.data)};
+    chatRecorder.onstop=()=>{
+      const type=chatRecorder?.mimeType||'audio/webm';
+      const blob=new Blob(chatRecordChunks,{type});
+      const ext=type.includes('ogg')?'ogg':'webm';
+      setChatAttachment(new File([blob],`voice_${Date.now()}.${ext}`,{type}));
+      chatRecordingStream?.getTracks().forEach(t=>t.stop());
+      chatRecordingStream=null;
+      chatRecorder=null;
+      chatRecordChunks=[];
+      if(btn){btn.classList.remove('chat-recording');btn.textContent='🎙️';btn.title='Record voice';}
+      if(status){status.style.display='inline';status.style.color='var(--good)';status.textContent='Voice ready — press Send.';}
+    };
+    chatRecorder.start();
+    if(btn){btn.classList.add('chat-recording');btn.textContent='⏹️';btn.title='Stop recording';}
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Recording voice… press ⏹️ when finished.';}
+  }catch(err){
+    chatRecordingStream?.getTracks().forEach(t=>t.stop());
+    chatRecordingStream=null;
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Microphone permission/error: '+(err?.message||'Unable to record');}
+  }
+}
+
+async function sendChatMessage(){
+  const input=$('messageInput'), status=$('messageSendStatus'), sendBtn=$('sendMessageBtn');
+  if(!input || !status || !sendBtn) return;
+  if(!activeChat){
+    status.style.display='inline'; status.style.color='var(--muted)'; status.textContent='Select a person first.';
+    return;
+  }
+  if(!sb || !user){
+    status.style.display='inline'; status.style.color='var(--danger)'; status.textContent='Chat is not connected to Supabase.';
+    return;
+  }
+  const text=input.value; const cleanText=text.trim(); const file=window.__chatAttachment;
+  if(!cleanText && !file){
+    status.style.display='inline'; status.style.color='var(--muted)'; status.textContent='Type a message or paste/attach a file first.';
+    input.focus(); return;
+  }
+  if(sendBtn.dataset.sending==='1') return;
+  sendBtn.dataset.sending='1'; sendBtn.disabled=true;
+  status.style.display='inline'; status.style.color='var(--muted)'; status.textContent=file?'Uploading attachment…':'Sending…';
+  try{
+    let media=null;
+    if(file) media=await uploadChatFile(file);
+    const payload={kind:media&&cleanText?'mixed':media?'media':'text',text:cleanText,media:media||null};
+    const {data,error}=await sb.from('messages').insert({
+      sender_id:user.id,
+      recipient_id:activeChat.id,
+      content:JSON.stringify(payload)
+    }).select('id,sender_id,recipient_id,content,created_at').single();
+    if(error) throw error;
+    const msgBox=$('chatMessagesList');
+    if(data && msgBox){
+      msgBox.querySelector('.empty')?.remove();
+      if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){
+        msgBox.insertAdjacentHTML('beforeend',messageBubble(data));
+      }
+      msgBox.scrollTop=msgBox.scrollHeight;
+    }
+    input.value=''; clearChatAttachment();
+    status.style.display='inline'; status.style.color='var(--good)'; status.textContent='Sent ✓';
+    window.setTimeout(()=>{ if(status) status.style.display='none'; },1200);
+    input.focus();
+  }catch(err){
+    console.error('Message send failed:',err);
+    status.style.display='inline'; status.style.color='var(--danger)';
+    status.textContent='Failed: '+(err?.message || err?.details || 'Unable to send');
+  }finally{
+    sendBtn.dataset.sending='0'; sendBtn.disabled=false;
+  }
+}
+
+function handleIncomingMessage(m){
+  if(!m||!activeChat)return;
+  const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);
+  if(String(otherId)!==String(activeChat.id))return;
+  const c=parseMessageContent(m.content);
+  if(c.kind==='reaction'){
+    loadActiveChatMessages().catch(()=>{});
+    return;
+  }
+  const box=$('chatMessagesList');
+  if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){
+    const empty=box.querySelector('.empty');if(empty)empty.remove();
+    box.insertAdjacentHTML('beforeend',messageBubble(m,{}));box.scrollTop=box.scrollHeight;
+  }
+}
+
+function renderSinglePost(p){
+ const name=p.user_name||'Pixel Friend',date=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now',m=normalizeMedia(p.media);let media='';if(m?.src){const path=m.path?esc(m.path):'';if(m.type==='image')media=`<div class="post-media"><img src="${esc(m.src)}" loading="lazy" decoding="async"></div>`;else if(m.type==='video')media=`<div class="post-media"><video src="${esc(m.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(m.type==='audio')media=`<div class="post-media"><audio src="${esc(m.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}const liked=(p.likes_users||[]).includes(user?.id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(date)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${media}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`}
+
+initSupabase();
+buildNav();
+ensureMessageComposer();
+
+if (sb) {
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user) {
+      user = session.user;
+      openApp();
+    }
+  });
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      user = null; posts = []; clearInterval(window.__pfFeedPoll);
+      if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel=null; }
+      if (presenceChannel) { sb.removeChannel(presenceChannel); presenceChannel=null; }
+      renderOnlineFriends();
+    }
+  });
+}
 </script>
-</body></html>
+</body>
+</html>

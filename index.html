@@ -64,9 +64,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .muted{color:var(--muted)}
 .post-body{padding:12px 0}
 .media-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.preview-item{position:relative;max-width:200px}
-.preview-item img,.preview-item video,.preview-item audio{max-width:100%;border-radius:8px;border:1px solid var(--line)}
-.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center}
+.preview-item{position:relative;max-width:100%;width:100%}
+.preview-item img,.preview-item video,.preview-item audio{max-width:100%;width:100%;border-radius:8px;border:1px solid var(--line)}
+.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center;z-index:5}
 .post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
 .post-media audio{width:100%;margin-top:10px}
 .post-actions{display:flex;gap:15px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
@@ -249,6 +249,7 @@ let activeRecipient = null;
 let chatSubscription = null;
 let notificationSubscription = null;
 let postsSubscription = null;
+let feedPollingInterval = null;
 
 const navItems=[
   ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
@@ -312,12 +313,18 @@ function openApp(){
  loadPosts();
  loadOnlineFriends();
  subscribeToPosts();
+ startFeedPolling();
  loadNotificationsCount(); 
  subscribeToNotifications();
  showPage("home");
 }
 
-function closeApp(){ $("app").style.display="none";$("auth").classList.remove("hidden"); }
+function closeApp(){ 
+  if(feedPollingInterval) clearInterval(feedPollingInterval);
+  $("app").style.display="none";
+  $("auth").classList.remove("hidden"); 
+}
+
 function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
 
 let register=false;
@@ -342,6 +349,7 @@ $("authForm").onsubmit=async e=>{
 };
 
 $("logout").onclick=async()=>{
+  if(feedPollingInterval) clearInterval(feedPollingInterval);
   if(mode==="cloud"&&sb)try{await sb.auth.signOut()}catch(e){}
   user=null;
   closeMenu();
@@ -364,8 +372,6 @@ $("drawerBackdrop").onclick=closeMenu;
 
 async function setMediaFile(file) {
   if (!file) return;
-  console.log("File selected for upload:", file.name, file.type);
-  
   let type = 'image';
   if (file.type.startsWith('video/')) type = 'video';
   else if (file.type.startsWith('audio/')) type = 'audio';
@@ -376,16 +382,13 @@ async function setMediaFile(file) {
     const fileExt = file.name.split('.').pop() || 'bin';
     const safeName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     
-    console.log("Starting Supabase upload to bucket 'post-media' with filename:", safeName);
     const { data, error } = await sb.storage.from('post-media').upload(safeName, file);
     
     if (error) {
-      console.error("Supabase Storage Upload Error:", error);
       $("uploadStatus").textContent = "Upload failed: " + error.message;
       return;
     }
 
-    console.log("Upload successful, fetching public URL...", data);
     const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
     currentMedia = { type, src: publicUrlData.publicUrl };
     $("uploadStatus").textContent = "Upload complete!";
@@ -402,7 +405,7 @@ function renderMediaPreview() {
   let mediaHtml = "";
   if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}">`;
   else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
-  else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls></audio>`;
+  else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls preload="metadata"></audio>`;
   
   container.innerHTML = `<div class="preview-item">${mediaHtml}<button class="remove-btn" onclick="removeMedia()">✕</button></div>`;
 }
@@ -455,6 +458,16 @@ async function loadPosts() {
       renderFeed(); 
     }
   }
+}
+
+function startFeedPolling() {
+  if (feedPollingInterval) clearInterval(feedPollingInterval);
+  feedPollingInterval = setInterval(() => {
+    if (user && mode === "cloud") {
+      loadPosts();
+      loadOnlineFriends();
+    }
+  }, 5000);
 }
 
 async function loadOnlineFriends() {
@@ -570,8 +583,8 @@ function renderFeed(){
    let mediaHtml = '';
    if(p.media){
      if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
-     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls></video></div>`;
-     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls></audio></div>`;
+     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls preload="metadata"></video></div>`;
+     else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls preload="metadata"></audio></div>`;
    }
 
    const isLiked = p.likes_users && p.likes_users.includes(user?.id);

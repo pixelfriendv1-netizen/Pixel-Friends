@@ -42,6 +42,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
+.bell-btn .notif-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid #050b11}
 .profile-btn{display:flex;align-items:center;gap:8px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
 .profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:900}
 
@@ -144,7 +145,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   </div>
   <div class="spacer"></div>
   <div class="header-actions">
-    <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications"><span style="font-size: 16px;">🔔</span></button>
+    <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications"><span style="font-size: 16px;">🔔</span><span class="notif-badge" id="notifBadge">0</span></button>
     <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
       <span class="profile-avatar" id="topAvatar">PF</span>
       <span>Profile</span>
@@ -186,7 +187,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 
 <section class="page" id="friends"><h2 class="page-title">Friends</h2><p class="page-sub">Build your own network.</p><div class="card"><div class="empty">You don't have any friends yet.</div></div></section>
 <section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user</div><div class="chat-messages" id="chatMessagesList"><div class="empty">No conversation selected.</div></div></div></div></div></section>
-<section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Mentions and activity.</p><div class="card"><div class="empty">You're all caught up.</div></div></section>
+<section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
 <section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
 <section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Preferences.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div></div></section>
@@ -203,6 +204,8 @@ let currentMedia = null;
 let feedRequest = null;
 let feedTimer = null;
 let realtimeChannel = null;
+let notifications = [];
+const NOTIF_KEY = "pixel_friends_notifications_v1";
 const FEED_CACHE_KEY = "pixel_friends_feed_v1";
 const FEED_LIMIT = 20;
 
@@ -316,7 +319,7 @@ $("logout").onclick=async()=>{
   $("auth").classList.remove("hidden");
 };
 
-$("topBell").onclick = () => { showPage("notifications"); closeMenu(); };
+$("topBell").onclick = () => { showPage("notifications"); markNotificationsRead(); closeMenu(); };
 $("topProfile").onclick = () => { showPage("profile"); closeMenu(); };
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
@@ -556,6 +559,7 @@ function applyRealtimeComment(payload){
   const row=payload?.new || payload?.old;
   const post=posts.find(p=>p.id===row?.post_id);
   if(!post || !row) return;
+  if(payload.eventType==='INSERT' && post.user_id===user?.id) addNotification('comment',row);
   post.comments=post.comments||[];
   if(payload.eventType==='INSERT'){
     if(!post.comments.some(c=>c.id===row.id)){
@@ -571,6 +575,35 @@ function applyRealtimeComment(payload){
   post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   saveFeedCache(); renderFeed();
 }
+
+function loadNotifications(){
+  try{ notifications=JSON.parse(localStorage.getItem(NOTIF_KEY)||"[]"); }catch(e){ notifications=[]; }
+  if(!Array.isArray(notifications)) notifications=[];
+  renderNotifications();
+}
+function saveNotifications(){
+  try{ localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications.slice(0,50))); }catch(e){}
+}
+function addNotification(type,row){
+  if(!user || !row || row.user_id===user.id) return;
+  const id=`${type}:${row.id}`;
+  if(notifications.some(n=>n.id===id)) return;
+  const actor=row.user_name||'Pixel Friend';
+  const text=type==='like' ? `${actor} liked your post.` : `${actor} commented on your post${row.content?`: ${row.content}`:'.'}`;
+  notifications.unshift({id,type,text,created_at:row.created_at||new Date().toISOString(),read:false});
+  notifications=notifications.slice(0,50);
+  saveNotifications(); renderNotifications();
+  if($('topBell')) $('topBell').animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:350});
+}
+function renderNotifications(){
+  const unread=notifications.filter(n=>!n.read).length;
+  const badge=$('notifBadge');
+  if(badge){badge.textContent=unread>99?'99+':String(unread);badge.style.display=unread?'flex':'none';}
+  const list=$('notificationList'); if(!list)return;
+  if(!notifications.length){list.innerHTML='<div class="empty">You\'re all caught up.</div>';return;}
+  list.innerHTML=notifications.map(n=>`<div class="comment-item" style="padding:12px;border:1px solid var(--line);background:${n.read?'#07111a':'#0a1d28'}"><div><b>${esc(n.text)}</b><div class="muted" style="margin-top:3px;font-size:11px">${esc(new Date(n.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div></div>`).join('');
+}
+function markNotificationsRead(){notifications=notifications.map(n=>({...n,read:true}));saveNotifications();renderNotifications();}
 
 function subscribeToFeed(){
   if(!sb || !user || realtimeChannel) return;
@@ -697,6 +730,7 @@ function renderFeed(){
 
 initSupabase();
 buildNav();
+loadNotifications();
 
 if (sb) {
   sb.auth.getSession().then(({ data: { session } }) => {

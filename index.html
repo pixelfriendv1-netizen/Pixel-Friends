@@ -196,7 +196,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 </section>
 
 <section class="page" id="friends"><h2 class="page-title">Friends</h2><p class="page-sub">Build your own network.</p><div class="card"><div class="empty">You don't have any friends yet.</div></div></section>
-<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user</div><div class="chat-messages" id="chatMessagesList"><div class="empty">No conversation selected.</div></div></div></div></div></section>
+<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div><div class="chat-messages" id="chatMessagesList"><div class="empty">No conversation selected.</div></div></div></div></div></section>
 <section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
 <section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
@@ -842,6 +842,7 @@ function subscribeToFeed(){
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`sender_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
       .subscribe(status=>{
         window.__pfRealtimeReady=status==='SUBSCRIBED';
         if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; fallback polling active.');
@@ -977,14 +978,49 @@ function setupMessages(){
    if(p.user_id && p.user_id!==user.id && !people.has(String(p.user_id))) people.set(String(p.user_id),p.user_name||'Pixel Friend');
  });
  const arr=[...people.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
- list.innerHTML=arr.length?arr.slice(0,50).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between"><span>💬 ${esc(name)}</span><span class="muted" style="font-size:10px">Start chat</span></button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet. Ask a friend to log in or publish a post.</div>';
+ list.innerHTML=arr.length?arr.slice(0,50).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between"><span>💬 ${esc(name)}</span><span class="muted" style="font-size:10px">Chat</span></button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet. Ask a friend to log in or publish a post.</div>';
  list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
 }
 let activeChat=null;
 function messageBubble(m){return `<div data-message-id="${esc(m.id)}" style="align-self:${m.sender_id===user?.id?'flex-end':'flex-start'};max-width:80%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:${m.sender_id===user?.id?'#0a1d28':'#08131c'}"><div>${esc(m.content)}</div><div class="muted" style="font-size:10px;margin-top:3px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`}
-async function openChat(uid,name){activeChat={id:uid,name};$('chatHeader').textContent=name;const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}ensureMessageComposer()}
-function ensureMessageComposer(){if($('messageComposer'))return;const box=$('.chat-box');if(!box)return;const form=document.createElement('form');form.id='messageComposer';form.style.cssText='display:flex;gap:6px;margin-top:8px';form.innerHTML='<input id="messageInput" required placeholder="Write a message..." style="flex:1;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:9px;outline:none"><button class="secondary" type="submit">Send</button>';box.appendChild(form);form.onsubmit=async e=>{e.preventDefault();if(!activeChat||!sb)return;const input=$('messageInput'),text=input.value.trim();if(!text)return;try{const {error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:text}]);if(error)throw error;input.value=''}catch(err){alert('Message failed: '+err.message)}}}
-function handleIncomingMessage(m){if(activeChat?.id===m.sender_id){const box=$('chatMessagesList');if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight}}}
+async function openChat(uid,name){activeChat={id:String(uid),name};$('chatHeader').innerHTML='💬 '+esc(name)+' <span class="muted" style="font-size:11px;font-weight:400">— conversation</span>';const input=$('messageInput');if(input)input.placeholder='Message '+name+'…';const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}ensureMessageComposer()}
+function ensureMessageComposer(){
+ const box=$('.chat-box');if(!box||$('messageComposer'))return;
+ const form=document.createElement('form');form.id='messageComposer';form.style.cssText='display:flex;gap:6px;margin-top:8px';
+ form.innerHTML='<input id="messageInput" autocomplete="off" placeholder="Select a friend, then write a message..." style="flex:1;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:10px;outline:none"><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="submit">Send</button><span id="messageSendStatus" class="muted" style="display:none;font-size:11px;align-self:center"></span>';
+ box.appendChild(form);
+ form.onsubmit=async e=>{
+   e.preventDefault();
+   if(!activeChat||!sb||!user)return;
+   const input=$('messageInput'),status=$('messageSendStatus'),text=input.value.trim();
+   if(!text)return;
+   status.style.display='inline';status.textContent='Sending…';
+   try{
+     const {data,error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:text}]).select('id,sender_id,recipient_id,content,created_at').single();
+     if(error)throw error;
+     if(data){
+       const msgBox=$('chatMessagesList');
+       const empty=msgBox.querySelector('.empty');if(empty)empty.remove();
+       if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){msgBox.insertAdjacentHTML('beforeend',messageBubble(data));msgBox.scrollTop=msgBox.scrollHeight;}
+     }
+     input.value='';status.style.display='none';
+   }catch(err){
+     status.textContent='Failed';status.style.color='var(--danger)';
+     console.error('Message send failed:',err);
+     alert('Message failed: ' + (err?.message||'Unknown error') + (err?.details?'\n'+err.details:''));
+   }
+ };
+}
+function handleIncomingMessage(m){
+ if(!m||!activeChat)return;
+ const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);
+ if(String(otherId)!==String(activeChat.id))return;
+ const box=$('chatMessagesList');
+ if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){
+   const empty=box.querySelector('.empty');if(empty)empty.remove();
+   box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight;
+ }
+}
 
 function renderSinglePost(p){
  const name=p.user_name||'Pixel Friend',date=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now',m=normalizeMedia(p.media);let media='';if(m?.src){const path=m.path?esc(m.path):'';if(m.type==='image')media=`<div class="post-media"><img src="${esc(m.src)}" loading="lazy" decoding="async"></div>`;else if(m.type==='video')media=`<div class="post-media"><video src="${esc(m.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(m.type==='audio')media=`<div class="post-media"><audio src="${esc(m.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}const liked=(p.likes_users||[]).includes(user?.id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(date)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${media}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`}

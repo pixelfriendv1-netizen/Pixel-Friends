@@ -150,7 +150,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <main class="main">
 <header class="top">
   <button class="menu-btn" id="menuBtn" aria-label="Toggle Menu">☰</button>
-  <div class="brand-mini" id="brandBtn" title="Click to Refresh Page">
+  <div class="brand-mini" id="brandBtn" title="Click to Refresh Feed">
     <div class="brand-icon">◉</div>
     <div>
       <div class="brand-name">PIXEL FRIENDS</div>
@@ -191,6 +191,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
           <button class="secondary" id="uploadVidBtn" style="font-size:12px">🎥 Video</button>
           <button class="secondary" id="uploadAudBtn" style="font-size:12px">🎵 Audio</button>
           <div class="spacer"></div>
+          <button class="secondary" id="refreshFeedBtn" style="font-size:12px" title="Manual Sync">🔄 Refresh Feed</button>
           <button class="primary" style="width:auto" id="postBtn">POST</button>
         </div>
       </div>
@@ -249,7 +250,6 @@ let activeRecipient = null;
 let chatSubscription = null;
 let notificationSubscription = null;
 let postsSubscription = null;
-let feedPollingInterval = null;
 
 const navItems=[
   ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
@@ -258,10 +258,11 @@ const navItems=[
 ];
 
 function $(id){return document.getElementById(id)}
-function refreshApp(){window.location.reload()}
+function refreshApp(){ loadPosts(); loadOnlineFriends(); }
 
 $("brandBtn").onclick = refreshApp;
-if($("sideLogo")) $("sideLogo").onclick = refreshApp;
+if($("sideLogo")) $("sideLogo").onclick = () => window.location.reload();
+if($("refreshFeedBtn")) $("refreshFeedBtn").onclick = refreshApp;
 
 function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
 
@@ -277,9 +278,7 @@ function buildNav(){
     host.querySelectorAll("button").forEach(b=>b.onclick=()=>{
       showPage(b.dataset.page);
       if(b.dataset.page === 'messages') loadChatUsers();
-      if(b.dataset.page === 'notifications') {
-        loadNotifications();
-      }
+      if(b.dataset.page === 'notifications') loadNotifications();
       closeMenu();
     });
   }
@@ -313,14 +312,12 @@ function openApp(){
  loadPosts();
  loadOnlineFriends();
  subscribeToPosts();
- startFeedPolling();
  loadNotificationsCount(); 
  subscribeToNotifications();
  showPage("home");
 }
 
 function closeApp(){ 
-  if(feedPollingInterval) clearInterval(feedPollingInterval);
   $("app").style.display="none";
   $("auth").classList.remove("hidden"); 
 }
@@ -349,7 +346,6 @@ $("authForm").onsubmit=async e=>{
 };
 
 $("logout").onclick=async()=>{
-  if(feedPollingInterval) clearInterval(feedPollingInterval);
   if(mode==="cloud"&&sb)try{await sb.auth.signOut()}catch(e){}
   user=null;
   closeMenu();
@@ -444,6 +440,7 @@ $("postBtn").onclick = async () => {
     
     // Instantly force load posts after publishing
     await loadPosts();
+    await loadOnlineFriends();
   }
 };
 
@@ -453,7 +450,7 @@ async function loadPosts() {
       .from('posts')
       .select('*, likes(user_id), comments(*)')
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(25);
 
     if (!error && data) { 
       posts = data.map(p => ({
@@ -465,16 +462,6 @@ async function loadPosts() {
       renderFeed(); 
     }
   }
-}
-
-function startFeedPolling() {
-  if (feedPollingInterval) clearInterval(feedPollingInterval);
-  feedPollingInterval = setInterval(() => {
-    if (user && mode === "cloud") {
-      loadPosts();
-      loadOnlineFriends();
-    }
-  }, 4000); // Polling checks every 4 seconds
 }
 
 async function loadOnlineFriends() {
@@ -534,8 +521,6 @@ function subscribeToPosts() {
   if (mode === "cloud" && sb) {
     postsSubscription = sb.channel('public:feed_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { loadPosts(); loadOnlineFriends(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => loadPosts())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => loadPosts())
       .subscribe();
   }
 }

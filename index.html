@@ -74,7 +74,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .post-action-btn:hover{background:#0d2230;color:var(--cyan)}
 .post-action-btn.liked{color:var(--danger)}
 .comments-box{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
-.comment-item{font-size:13px;padding:6px;background:#03080d;border-radius:6px;margin-top:5px}
+.comment-item{font-size:13px;padding:6px;background:#03080d;border-radius:6px;margin-top:5px;display:flex;justify-content:space-between;align-items:center;}
 
 .empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
 .list{display:grid;gap:9px}
@@ -507,6 +507,8 @@ function renderFeed(){
  const f=$("feed");if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
  f.innerHTML=posts.map(p=>{
    const name = p.user_name || p.name || 'Pixel Friend';
+   const postDate = p.created_at ? new Date(p.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Just now';
+   
    let mediaHtml = '';
    if(p.media){
      if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
@@ -520,7 +522,7 @@ function renderFeed(){
    return `<article class="post" data-post-id="${p.id || ''}">
      <div class="post-head">
        <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
-       <div><b>${esc(name)}</b><div class="muted">Just now</div></div>
+       <div><b>${esc(name)}</b><div class="muted">${esc(postDate)}</div></div>
      </div>
      ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
      ${mediaHtml}
@@ -532,7 +534,13 @@ function renderFeed(){
      <div class="comments-box">
        <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (${comments.length})</div>
        <div style="display:grid;gap:5px;margin-bottom:8px">
-         ${comments.map(c=>`<div class="comment-item"><b>${esc(c.user_name)}:</b>${esc(c.content || c.text)}</div>`).join('')}
+         ${comments.map(c=>{
+           const commentTime = c.created_at ? new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+           return `<div class="comment-item">
+             <div><b>${esc(c.user_name)}:</b>${esc(c.content || c.text)}</div>
+             <span style="font-size:10px;color:var(--muted);">${esc(commentTime)}</span>
+           </div>`;
+         }).join('')}
        </div>
        <form onsubmit="handleAddComment('${p.id}', event)" style="display:flex;gap:5px">
          <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none">
@@ -713,7 +721,11 @@ async function loadMessages() {
 
   messagesList.innerHTML = data.map(m => {
     const isSender = m.sender_id === user.id;
-    return `<div class="chat-msg ${isSender ? 'sent' : 'received'}">${esc(m.content)}</div>`;
+    const msgTime = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="chat-msg ${isSender ? 'sent' : 'received'}">
+      <div>${esc(m.content)}</div>
+      <div style="font-size: 9px; opacity: 0.7; margin-top: 2px; text-align: right;">${esc(msgTime)}</div>
+    </div>`;
   }).join('');
   messagesList.scrollTop = messagesList.scrollHeight;
 }

@@ -227,7 +227,7 @@ const navItems=[
 ];
 
 function $(id){return document.getElementById(id)}
-function refreshApp(){ loadPosts(); }
+function refreshApp(){ window.location.reload(); }
 
 $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = () => window.location.reload();

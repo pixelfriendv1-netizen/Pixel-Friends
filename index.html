@@ -982,44 +982,110 @@ function setupMessages(){
  list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
 }
 let activeChat=null;
-function messageBubble(m){return `<div data-message-id="${esc(m.id)}" style="align-self:${m.sender_id===user?.id?'flex-end':'flex-start'};max-width:80%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:${m.sender_id===user?.id?'#0a1d28':'#08131c'}"><div>${esc(m.content)}</div><div class="muted" style="font-size:10px;margin-top:3px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`}
-async function openChat(uid,name){activeChat={id:String(uid),name};$('chatHeader').innerHTML='💬 '+esc(name)+' <span class="muted" style="font-size:11px;font-weight:400">— conversation</span>';const input=$('messageInput');if(input)input.placeholder='Message '+name+'…';const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}ensureMessageComposer()}
+function parseMessageContent(content){
+  if(!content) return {kind:'text',text:''};
+  try{
+    const x=JSON.parse(content);
+    if(x && (x.kind==='text' || x.kind==='media' || x.kind==='mixed')) return x;
+  }catch(e){}
+  return {kind:'text',text:String(content)};
+}
+function messageBubble(m){
+  const mine=String(m.sender_id)===String(user?.id);
+  const c=parseMessageContent(m.content);
+  let body='';
+  if(c.text) body+=`<div style="white-space:pre-wrap;word-break:break-word">${esc(c.text)}</div>`;
+  if(c.media?.src){
+    const src=esc(c.media.src), type=esc(c.media.type||'');
+    if(type==='image') body+=`<div style="margin-top:${c.text?'8px':'0'}"><img src="${src}" loading="lazy" style="max-width:min(360px,100%);max-height:320px;object-fit:contain;border-radius:8px;border:1px solid var(--line);display:block"></div>`;
+    else if(type==='video') body+=`<div style="margin-top:${c.text?'8px':'0'}"><video src="${src}" controls preload="metadata" playsinline style="max-width:min(420px,100%);max-height:320px;border-radius:8px;display:block"></video></div>`;
+    else if(type==='audio') body+=`<div style="margin-top:${c.text?'8px':'0'}"><audio src="${src}" controls preload="metadata" style="width:min(420px,100%);display:block"></audio></div>`;
+    else body+=`<a href="${src}" target="_blank" rel="noopener" style="color:var(--cyan)">📎 Open attachment</a>`;
+  }
+  return `<div data-message-id="${esc(m.id)}" style="align-self:${mine?'flex-end':'flex-start'};max-width:82%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:${mine?'#0a1d28':'#08131c'}"><div>${body||'<span class="muted">Attachment</span>'}</div><div class="muted" style="font-size:10px;margin-top:4px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`;
+}
+async function uploadChatFile(file){
+  if(!file || !sb) return null;
+  const ext=(file.name||'attachment').split('.').pop() || (file.type.split('/')[1]||'bin');
+  const safeName=`chat_${crypto.randomUUID?.() || (Date.now()+'_'+Math.random().toString(36).slice(2,8))}.${ext}`;
+  const {error}=await sb.storage.from('post-media').upload(safeName,file,{contentType:file.type||undefined,cacheControl:'31536000',upsert:false});
+  if(error) throw error;
+  const {data}=sb.storage.from('post-media').getPublicUrl(safeName);
+  return {type:file.type?.startsWith('image/')?'image':file.type?.startsWith('video/')?'video':file.type?.startsWith('audio/')?'audio':'file',src:data.publicUrl,path:safeName,name:file.name||safeName};
+}
+function setChatAttachment(file){
+  if(!file) return;
+  const allowed=file.type?.startsWith('image/')||file.type?.startsWith('video/')||file.type?.startsWith('audio/');
+  if(!allowed){$('messageSendStatus').textContent='Please choose an image, video, or audio file.';$('messageSendStatus').style.display='inline';return;}
+  window.__chatAttachment=file;
+  const preview=$('chatAttachmentPreview');
+  if(preview){
+    const url=URL.createObjectURL(file);
+    const kind=file.type.startsWith('image/')?'🖼️':file.type.startsWith('video/')?'🎥':'🎵';
+    preview.innerHTML=`<span>${kind} ${esc(file.name||'Pasted file')}</span><button type="button" class="secondary" style="padding:3px 7px" onclick="clearChatAttachment()">✕</button>`;
+    preview.dataset.url=url;
+  }
+}
+function clearChatAttachment(){
+  const preview=$('chatAttachmentPreview');
+  if(preview?.dataset.url) URL.revokeObjectURL(preview.dataset.url);
+  window.__chatAttachment=null;
+  if(preview) preview.innerHTML='';
+  const fi=$('chatFileInput');if(fi)fi.value='';
+}
+function handleChatPaste(e){
+  const items=[...(e.clipboardData?.items||[])];
+  const fileItem=items.find(i=>i.kind==='file' && /^(image|video|audio)\//.test(i.type));
+  if(fileItem){
+    const file=fileItem.getAsFile();
+    if(file){e.preventDefault();setChatAttachment(file);}
+  }
+}
+async function openChat(uid,name){
+  activeChat={id:String(uid),name};
+  $('chatHeader').innerHTML='💬 '+esc(name)+' <span class="muted" style="font-size:11px;font-weight:400">— conversation</span>';
+  const input=$('messageInput');if(input)input.placeholder='Type a message or paste an image…';
+  const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';
+  if(!sb)return;
+  try{
+    const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);
+    if(error)throw error;
+    box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet. Send a message below.</div>';
+    box.scrollTop=box.scrollHeight;
+  }catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}
+  ensureMessageComposer();
+}
 function ensureMessageComposer(){
- const box=$('.chat-box');if(!box||$('messageComposer'))return;
- const form=document.createElement('form');form.id='messageComposer';form.style.cssText='display:flex;gap:6px;margin-top:8px';
- form.innerHTML='<input id="messageInput" autocomplete="off" placeholder="Select a friend, then write a message..." style="flex:1;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:10px;outline:none"><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="submit">Send</button><span id="messageSendStatus" class="muted" style="display:none;font-size:11px;align-self:center"></span>';
- box.appendChild(form);
- form.onsubmit=async e=>{
-   e.preventDefault();
-   if(!activeChat||!sb||!user)return;
-   const input=$('messageInput'),status=$('messageSendStatus'),text=input.value.trim();
-   if(!text)return;
-   status.style.display='inline';status.textContent='Sending…';
-   try{
-     const {data,error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:text}]).select('id,sender_id,recipient_id,content,created_at').single();
-     if(error)throw error;
-     if(data){
-       const msgBox=$('chatMessagesList');
-       const empty=msgBox.querySelector('.empty');if(empty)empty.remove();
-       if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){msgBox.insertAdjacentHTML('beforeend',messageBubble(data));msgBox.scrollTop=msgBox.scrollHeight;}
-     }
-     input.value='';status.style.display='none';
-   }catch(err){
-     status.textContent='Failed';status.style.color='var(--danger)';
-     console.error('Message send failed:',err);
-     alert('Message failed: ' + (err?.message||'Unknown error') + (err?.details?'\n'+err.details:''));
-   }
- };
+  const box=$('.chat-box');if(!box||$('messageComposer'))return;
+  const form=document.createElement('form');form.id='messageComposer';form.style.cssText='margin-top:8px;display:grid;gap:6px';
+  form.innerHTML=`<div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div style="display:flex;gap:6px;align-items:flex-end"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Select a friend, then type or paste…" style="flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none"></textarea><div style="display:grid;gap:5px"><button type="button" class="secondary" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="submit">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span>`;
+  box.appendChild(form);
+  $('chatAttachBtn').onclick=()=>$('chatFileInput').click();
+  $('chatFileInput').onchange=e=>{if(e.target.files?.[0])setChatAttachment(e.target.files[0]);};
+  $('messageInput').addEventListener('paste',handleChatPaste);
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    if(!activeChat||!sb||!user)return;
+    const input=$('messageInput'),status=$('messageSendStatus'),text=input.value.trim(),file=window.__chatAttachment;
+    if(!text && !file)return;
+    status.style.display='inline';status.style.color='var(--muted)';status.textContent=file?'Uploading…':'Sending…';
+    try{
+      let media=null;
+      if(file) media=await uploadChatFile(file);
+      const payload={kind:media&&text?'mixed':media?'media':'text',text:text||'',media:media||null};
+      const {data,error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:JSON.stringify(payload)}]).select('id,sender_id,recipient_id,content,created_at').single();
+      if(error)throw error;
+      if(data){const msgBox=$('chatMessagesList');const empty=msgBox.querySelector('.empty');if(empty)empty.remove();if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){msgBox.insertAdjacentHTML('beforeend',messageBubble(data));msgBox.scrollTop=msgBox.scrollHeight;}}
+      input.value='';clearChatAttachment();status.style.display='none';
+    }catch(err){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Failed: '+(err?.message||'Unknown error');console.error('Message send failed:',err);}
+  };
 }
 function handleIncomingMessage(m){
- if(!m||!activeChat)return;
- const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);
- if(String(otherId)!==String(activeChat.id))return;
- const box=$('chatMessagesList');
- if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){
-   const empty=box.querySelector('.empty');if(empty)empty.remove();
-   box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight;
- }
+  if(!m||!activeChat)return;
+  const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);
+  if(String(otherId)!==String(activeChat.id))return;
+  const box=$('chatMessagesList');
+  if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight;}
 }
 
 function renderSinglePost(p){

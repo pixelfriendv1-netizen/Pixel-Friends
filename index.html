@@ -1,7 +1,10 @@
 
+
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://koljxgkatllfexwoxnfi.supabase.co" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pixel Friends — Cyber Community</title>
@@ -173,7 +176,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
           <button class="primary" style="width:auto" id="postBtn">POST</button>
         </div>
       </div>
-      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div></div></div>
+      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">Loading community feed…</div></div></div>
     </div>
     <div>
       <div class="card"><h3>Online friends</h3><div class="list"><div class="empty">No friends online yet.</div></div></div>
@@ -205,12 +208,16 @@ const navItems=[
 ];
 
 function $(id){return document.getElementById(id)}
-function refreshApp(){ loadPosts(); loadOnlineFriends(); }
+function refreshApp(){ loadPosts(); }
 
 $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = () => window.location.reload();
 
-function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
+function initSupabase(){
+  try{
+    if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  }catch(e){ sb=null; }
+}
 
 function esc(str) {
   if (!str) return '';
@@ -257,9 +264,8 @@ function openApp(){
  $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();
  $("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
  
- loadPosts();
- loadOnlineFriends();
  showPage("home");
+ requestAnimationFrame(() => { loadPosts(); });
 }
 
 function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
@@ -309,32 +315,50 @@ $("topProfile").onclick = () => { showPage("profile"); closeMenu(); };
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
 
-async function setMediaFile(file) {
-  if (!file) return;
+async function prepareMedia(file) {
+  if (!file) return null;
   let type = 'image';
   if (file.type.startsWith('video/')) type = 'video';
   else if (file.type.startsWith('audio/')) type = 'audio';
-
-  if (sb) {
-    $("uploadStatus").textContent = "Uploading media...";
-    const fileExt = file.name.split('.').pop() || 'bin';
-    const safeName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-    const { error } = await sb.storage.from('post-media').upload(safeName, file);
-    if (error) { $("uploadStatus").textContent = "Upload failed: " + error.message; return; }
-
-    const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
-    currentMedia = { type, src: publicUrlData.publicUrl };
-    $("uploadStatus").textContent = "Ready!";
-    renderMediaPreview();
+  if (type === 'image' && !/image\/gif|image\/svg\+xml/i.test(file.type) && file.size > 350 * 1024) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const ctx = canvas.getContext('2d', {alpha:false});
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close?.();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
+      if (blob && blob.size < file.size) file = new File([blob], 'image.webp', {type:'image/webp'});
+    } catch (e) { console.warn('Image compression skipped:', e); }
   }
+  return {file, type};
 }
 
+async function setMediaFile(file) {
+  if (!file || !sb) return;
+  const prepared = await prepareMedia(file);
+  if (!prepared) return;
+  const {file: uploadFile, type} = prepared;
+  $('uploadStatus').textContent = 'Uploading media…';
+  const ext = uploadFile.name.split('.').pop() || 'bin';
+  const safeName = `media_${crypto.randomUUID?.() || (Date.now()+'_'+Math.random().toString(36).slice(2,8))}.${ext}`;
+  const { error } = await sb.storage.from('post-media').upload(safeName, uploadFile, {contentType: uploadFile.type || undefined, cacheControl:'31536000', upsert:false});
+  if (error) { $('uploadStatus').textContent = 'Upload failed: ' + error.message; return; }
+  const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
+  currentMedia = {type, src: publicUrlData.publicUrl};
+  $('uploadStatus').textContent = 'Ready!';
+  renderMediaPreview();
+}
 function renderMediaPreview() {
   const container = $("mediaPreview");
   if (!currentMedia) { container.innerHTML = ""; return; }
   let mediaHtml = "";
-  if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}">`;
-  else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls></video>`;
+  if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}" loading="lazy" decoding="async">`;
+  else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls preload="metadata" playsinline></video>`;
   else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls preload="metadata"></audio>`;
   container.innerHTML = `<div class="preview-item">${mediaHtml}<button class="remove-btn" onclick="currentMedia=null;renderMediaPreview()">✕</button></div>`;
 }
@@ -352,65 +376,178 @@ $("mediaInput").onchange = (e) => { if (e.target.files && e.target.files[0]) set
 $("postBtn").onclick = async () => {
   const text = $("postText").value.trim();
   if (!text && !currentMedia) return;
+  if (!sb || !user) return;
+  const btn = $("postBtn");
+  btn.disabled = true;
+  btn.textContent = "POSTING…";
 
-  const newPost = { user_id: user?.id, user_name: displayName(), text: text || null, media: currentMedia ? { ...currentMedia } : null };
-  if (sb) {
-    const { error } = await sb.from('posts').insert([newPost]);
-    if (error) { alert("Failed to post: " + error.message); return; }
-    $("postText").value = "";
-    currentMedia = null;
-    $("uploadStatus").textContent = "";
-    renderMediaPreview();
-    loadPosts();
+  const now = new Date().toISOString();
+  const tempId = "temp-" + Date.now();
+  const optimisticPost = {
+    id: tempId, user_id: user.id, user_name: displayName(), text: text || null,
+    media: currentMedia ? {...currentMedia} : null, created_at: now,
+    likes_users: [], likes_count: 0, comments: [], _pending: true
+  };
+  posts = [optimisticPost, ...posts].slice(0, 25);
+  renderFeed();
+  $("postText").value = "";
+  currentMedia = null;
+  $("uploadStatus").textContent = "";
+  renderMediaPreview();
+
+  try {
+    const {data, error} = await sb.from('posts').insert([{
+      user_id:user.id, user_name:displayName(), text:text||null, media:optimisticPost.media
+    }]).select('id,user_id,user_name,text,media,created_at').single();
+    if (error) throw error;
+    const saved = {...data, likes_users:[], likes_count:0, comments:[]};
+    posts = posts.map(p => p.id === tempId ? saved : p);
+    renderFeed();
+  } catch (err) {
+    posts = posts.filter(p => p.id !== tempId);
+    renderFeed();
+    alert("Failed to post: " + (err?.message || "Unknown error"));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "POST";
   }
 };
 
 async function loadPosts() {
-  if (sb) {
-    const { data, error } = await sb.from('posts').select('*, likes(user_id), comments(*)').order('created_at', { ascending: false }).limit(25);
-    if (!error && data) { 
-      posts = data.map(p => ({
+  if (!sb) return;
+  const feed = $("feed");
+  if (!posts.length) feed.innerHTML = '<div class="empty">Loading community feed…</div>';
+
+  try {
+    // Keep the first feed request small: only fields actually rendered.
+    const { data: postRows, error: postError } = await sb
+      .from('posts')
+      .select('id,user_id,user_name,text,media,created_at')
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (postError) throw postError;
+
+    const rows = postRows || [];
+    if (!rows.length) {
+      posts = [];
+      renderFeed();
+      renderOnlineFriends([]);
+      return;
+    }
+
+    const ids = rows.map(p => p.id);
+
+    // Fetch likes/comments for only the 25 visible posts, in parallel.
+    const [likesResult, commentsResult] = await Promise.all([
+      sb.from('likes').select('post_id,user_id').in('post_id', ids),
+      sb.from('comments').select('id,post_id,user_id,user_name,content,created_at')
+        .in('post_id', ids).order('created_at', { ascending: true })
+    ]);
+
+    if (likesResult.error) throw likesResult.error;
+    if (commentsResult.error) throw commentsResult.error;
+
+    const likesByPost = new Map();
+    (likesResult.data || []).forEach(l => {
+      if (!likesByPost.has(l.post_id)) likesByPost.set(l.post_id, []);
+      likesByPost.get(l.post_id).push(l.user_id);
+    });
+
+    const commentsByPost = new Map();
+    (commentsResult.data || []).forEach(c => {
+      if (!commentsByPost.has(c.post_id)) commentsByPost.set(c.post_id, []);
+      commentsByPost.get(c.post_id).push(c);
+    });
+
+    posts = rows.map(p => {
+      const likeUsers = likesByPost.get(p.id) || [];
+      return {
         ...p,
-        likes_users: p.likes ? p.likes.map(l => l.user_id) : [],
-        likes_count: p.likes ? p.likes.length : 0,
-        comments: p.comments ? p.comments.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)) : []
-      }));
-      renderFeed(); 
+        likes_users: likeUsers,
+        likes_count: likeUsers.length,
+        comments: commentsByPost.get(p.id) || []
+      };
+    });
+
+    renderFeed();
+    renderOnlineFriends(posts);
+  } catch (err) {
+    console.error("Feed load failed:", err);
+    if (!posts.length) {
+      feed.innerHTML = '<div class="empty">Could not load the community feed. Please try again.</div>';
     }
   }
 }
 
-async function loadOnlineFriends() {
+function renderOnlineFriends(feedPosts) {
   const container = document.querySelector('.grid > div:nth-child(2) .list');
-  if (!container || !sb) return;
-  const { data } = await sb.from('posts').select('user_id, user_name, created_at').order('created_at', { ascending: false });
-  if (!data) return;
+  if (!container) return;
+
+  // The previous version scanned the entire posts table here. Reuse the already
+  // loaded feed data instead, avoiding a second unbounded database request.
   const map = new Map();
-  data.forEach(item => { if (item.user_id && item.user_id !== user?.id && !map.has(item.user_id)) map.set(item.user_id, item.user_name); });
+  (feedPosts || []).forEach(item => {
+    if (item.user_id && item.user_id !== user?.id && !map.has(item.user_id)) {
+      map.set(item.user_id, item.user_name || 'Pixel Friend');
+    }
+  });
+
   const online = Array.from(map.entries()).slice(0, 5);
-  container.innerHTML = online.length ? online.map(([uid, name]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;margin-bottom:6px;"><b style="font-size:13px;">${esc(name)}</b></div>`).join('') : '<div class="empty" style="font-size:12px;padding:10px;">No friends online.</div>';
+  container.innerHTML = online.length
+    ? online.map(([uid, name]) =>
+        `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;margin-bottom:6px;"><b style="font-size:13px;">${esc(name)}</b></div>`
+      ).join('')
+    : '<div class="empty" style="font-size:12px;padding:10px;">No friends online.</div>';
 }
 
 async function handleLike(postId) {
   const post = posts.find(p => p.id === postId);
-  if (!post || !sb) return;
+  if (!post || !sb || !user || post._pending) return;
   const hasLiked = (post.likes_users || []).includes(user.id);
-  if (hasLiked) {
-    await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
-  } else {
-    await sb.from('likes').insert([{ post_id: postId, user_id: user.id }]);
+  const oldUsers = [...(post.likes_users || [])];
+  post.likes_users = hasLiked ? oldUsers.filter(id => id !== user.id) : [...oldUsers, user.id];
+  post.likes_count = post.likes_users.length;
+  renderFeed();
+  try {
+    const result = hasLiked
+      ? await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id)
+      : await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);
+    if (result.error) throw result.error;
+  } catch (err) {
+    post.likes_users = oldUsers;
+    post.likes_count = oldUsers.length;
+    renderFeed();
+    console.error('Like failed:', err);
   }
-  loadPosts();
 }
 
 async function handleAddComment(postId, event) {
   event.preventDefault();
-  const input = $(`comment-input-${postId}`);
-  const text = input.value.trim();
-  if (!text || !sb) return;
-  await sb.from('comments').insert([{ post_id: postId, user_id: user.id, user_name: displayName(), content: text }]);
+  const post = posts.find(p => p.id === postId);
+  const input = $("comment-input-" + postId);
+  const text = input?.value.trim();
+  if (!post || !text || !sb || !user || post._pending) return;
+  const submit = event.submitter;
+  if (submit) { submit.disabled = true; submit.textContent = '…'; }
+  const tempId = 'temp-comment-' + Date.now();
+  const optimistic = {id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
+  post.comments = [...(post.comments || []), optimistic];
   input.value = '';
-  loadPosts();
+  renderFeed();
+  try {
+    const {data,error} = await sb.from('comments').insert([{post_id:postId,user_id:user.id,user_name:displayName(),content:text}]).select('id,post_id,user_id,user_name,content,created_at').single();
+    if (error) throw error;
+    post.comments = (post.comments || []).map(c => c.id === tempId ? data : c);
+    renderFeed();
+  } catch (err) {
+    post.comments = (post.comments || []).filter(c => c.id !== tempId);
+    input.value = text;
+    renderFeed();
+    console.error('Comment failed:', err);
+  } finally {
+    if (submit) { submit.disabled = false; submit.textContent = 'Send'; }
+  }
 }
 
 function renderFeed(){
@@ -421,8 +558,8 @@ function renderFeed(){
    const postDate = p.created_at ? new Date(p.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Just now';
    let mediaHtml = '';
    if(p.media){
-     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}"></div>`;
-     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls preload="metadata"></video></div>`;
+     if(p.media.type==='image') mediaHtml = `<div class="post-media"><img src="${p.media.src}" loading="lazy" decoding="async"></div>`;
+     else if(p.media.type==='video') mediaHtml = `<div class="post-media"><video src="${p.media.src}" controls preload="none" playsinline></video></div>`;
      else if(p.media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${p.media.src}" controls preload="metadata"></audio></div>`;
    }
    const isLiked = (p.likes_users || []).includes(user?.id);

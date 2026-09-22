@@ -39,7 +39,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
 .brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
 
-/* Separate Bell & Profile Button Styles */
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
 .bell-btn:hover { border-color: var(--cyan); }
@@ -162,12 +161,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   <div class="spacer"></div>
   
   <div class="header-actions">
-    <!-- Notification Bell Button with Badge Support -->
     <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications">
       <span style="font-size: 16px;">🔔</span>
     </button>
-
-    <!-- Profile Button -->
     <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
       <span class="profile-avatar" id="topAvatar">PF</span>
       <span>Profile</span>
@@ -188,7 +184,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
         <textarea id="postText" placeholder="📋 Paste text, 🖼️ screenshots, or copied pictures directly here (Ctrl+V) and video and audio"></textarea>
         
         <input type="file" id="mediaInput" accept="image/*,video/*,audio/*" class="hidden">
-        
         <div id="mediaPreview" class="media-preview"></div>
 
         <div class="row" style="margin-top:10px">
@@ -349,7 +344,6 @@ $("logout").onclick=async()=>{
   closeApp();
 };
 
-/* Button Click Handlers */
 $("topBell").onclick = () => {
   showPage("notifications");
   loadNotifications();
@@ -364,7 +358,6 @@ $("topProfile").onclick = () => {
 $("menuBtn").onclick=toggleMenu;
 $("drawerBackdrop").onclick=closeMenu;
 
-/* File & Clipboard Handling */
 function setMediaFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -464,16 +457,6 @@ async function handleLike(postId) {
       await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
     } else {
       await sb.from('likes').insert([{ post_id: postId, user_id: user.id }]);
-      if (true) { 
-        await sb.from('notifications').insert([{
-          user_id: post.user_id,
-          type: 'post',
-          target_id: postId,
-          title: `New Reaction ❤️`,
-          message: `${displayName()} liked your post.`,
-          is_read: false
-        }]);
-      }
     }
     loadPosts();
   } else {
@@ -507,17 +490,6 @@ async function handleAddComment(postId, event) {
     if (error) {
       alert("Failed to post comment: " + error.message);
       return;
-    }
-
-    if (post) {
-      await sb.from('notifications').insert([{
-        user_id: post.user_id,
-        type: 'post',
-        target_id: postId,
-        title: `New Comment 💬`,
-        message: `${displayName()} commented: "${text.slice(0, 25)}..."`,
-        is_read: false
-      }]);
     }
 
     input.value = '';
@@ -571,7 +543,6 @@ function renderFeed(){
  }).join("");
 }
 
-/* --- Notifications & Unread Badge Counter Logic --- */
 async function loadNotificationsCount() {
   if (mode !== "cloud" || !sb || !user) return;
   const { count, error } = await sb
@@ -691,7 +662,6 @@ function subscribeToNotifications() {
   }
 }
 
-/* --- Direct Messaging Logic --- */
 async function loadChatUsers() {
   const usersListElem = $("chatUsersList");
   if (mode !== "cloud" || !sb) {
@@ -759,15 +729,6 @@ async function handleMessageSubmit(event) {
   if (error) {
     alert("Failed to send message: " + error.message);
   } else {
-    await sb.from('notifications').insert([{
-      user_id: activeRecipient,
-      type: 'message',
-      target_id: user.id,
-      title: `Message from ${displayName()}`,
-      message: content.length > 35 ? content.slice(0, 35) + '...' : content,
-      is_read: false
-    }]);
-
     inputElem.value = ''; 
     loadMessages(); 
   }

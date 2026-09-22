@@ -508,7 +508,7 @@ async function loadPosts(background=false){
       const list=rows||[];
       if(!list.length){
         const pending=posts.filter(p=>p._pending);
-        posts=pending; renderFeed(); renderOnlineFriends(posts); saveFeedCache(); return;
+        posts=pending; renderFeed(); renderOnlineFriends(posts); setupMessages(); saveFeedCache(); return;
       }
       const ids=list.map(p=>p.id);
       const [likesRes,commentsRes]=await Promise.all([
@@ -524,7 +524,7 @@ async function loadPosts(background=false){
       // Preserve any local optimistic operations that are still waiting for Supabase.
       const pending=posts.filter(p=>p._pending && !fresh.some(x=>x.id===p.id));
       posts=[...pending,...fresh].slice(0,FEED_LIMIT);
-      renderFeed(); renderOnlineFriends(posts); saveFeedCache();
+      renderFeed(); renderOnlineFriends(posts); setupMessages(); saveFeedCache();
     }catch(err){
       console.error('Feed refresh failed:',err);
       if(!posts.length) feed.innerHTML='<div class="empty">Could not load the community feed. Please try again.</div>';
@@ -641,92 +641,91 @@ function renderOnlineFriends(feedPosts){
  container.innerHTML=online.length?online.map(([uid,name])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;margin-bottom:6px;"><b style="font-size:13px;">${esc(name)}</b></div>`).join(''):'<div class="empty" style="font-size:12px;padding:10px;">No friends online.</div>';
 }
 
-async function handleLike(postId) {
-  const post = posts.find(p => p.id === postId);
-  if (!post || !sb || !user || post._pending) return;
-  const hasLiked = (post.likes_users || []).includes(user.id);
-  const oldUsers = [...(post.likes_users || [])];
-  post.likes_users = hasLiked ? oldUsers.filter(id => id !== user.id) : [...oldUsers, user.id];
-  post.likes_count = post.likes_users.length;
-  saveFeedCache();
-  renderFeed();
-  try {
-    const result = hasLiked
-      ? await sb.from('likes').delete().eq('post_id', postId).eq('user_id', user.id)
-      : await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);
-    if (result.error) throw result.error;
-  } catch (err) {
-    post.likes_users = oldUsers;
-    post.likes_count = oldUsers.length;
-    saveFeedCache();
-    renderFeed();
-    console.error('Like failed:', err);
-  }
+function postById(id){return posts.find(p=>p.id===id)}
+function postElement(id){return document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`)}
+function commentHtml(c){return `<div class="comment-item" data-comment-id="${esc(c.id)}"><div><b>${esc(c.user_name||'Pixel Friend')}:</b> ${esc(c.content||'')}</div></div>`}
+function updatePostElement(post){
+  const el=postElement(post.id); if(!el)return false;
+  const likeBtn=el.querySelector('[data-action="like"]');
+  if(likeBtn){likeBtn.classList.toggle('liked',(post.likes_users||[]).includes(user?.id));const count=likeBtn.querySelector('[data-like-count]');if(count)count.textContent=post.likes_count||0;}
+  const cc=el.querySelector('[data-comment-count]');if(cc)cc.textContent=(post.comments||[]).length;
+  const list=el.querySelector('[data-comments]');if(list)list.innerHTML=(post.comments||[]).map(commentHtml).join('');
+  return true;
 }
-
-async function handleAddComment(postId, event) {
-  event.preventDefault();
-  const post = posts.find(p => p.id === postId);
-  const input = $("comment-input-" + postId);
-  const text = input?.value.trim();
-  if (!post || !text || !sb || !user || post._pending) return;
-  const submit = event.submitter;
-  if (submit) { submit.disabled = true; submit.textContent = '…'; }
-  const tempId = 'temp-comment-' + Date.now();
-  const optimistic = {id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
-  post.comments = [...(post.comments || []), optimistic];
-  saveFeedCache();
-  input.value = '';
-  renderFeed();
-  try {
-    const {data,error} = await sb.from('comments').insert([{post_id:postId,user_id:user.id,user_name:displayName(),content:text}]).select('id,post_id,user_id,user_name,content,created_at').single();
-    if (error) throw error;
-    post.comments = (post.comments || []).map(c => c.id === tempId ? data : c);
-    saveFeedCache();
-    renderFeed();
-  } catch (err) {
-    post.comments = (post.comments || []).filter(c => c.id !== tempId);
-    saveFeedCache();
-    input.value = text;
-    renderFeed();
-    console.error('Comment failed:', err);
-  } finally {
-    if (submit) { submit.disabled = false; submit.textContent = 'Send'; }
-  }
+async function handleLike(postId){
+  const post=postById(postId);if(!post||!sb||!user||post._pending||post._likeBusy)return;
+  post._likeBusy=true;const liked=(post.likes_users||[]).includes(user.id);const old=[...(post.likes_users||[])];
+  post.likes_users=liked?old.filter(id=>id!==user.id):[...old,user.id];post.likes_count=post.likes_users.length;updatePostElement(post);saveFeedCache();
+  try{const r=liked?await sb.from('likes').delete().eq('post_id',postId).eq('user_id',user.id):await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);if(r.error)throw r.error;}
+  catch(e){post.likes_users=old;post.likes_count=old.length;updatePostElement(post);saveFeedCache();console.error('Like failed:',e)}
+  finally{post._likeBusy=false}
 }
-
+async function handleAddComment(postId,event){
+  event.preventDefault();const post=postById(postId);const form=event.target;const input=form.querySelector('input');const text=input?.value.trim();if(!post||!text||!sb||!user||post._pending)return;
+  const submit=event.submitter;if(submit){submit.disabled=true;submit.textContent='…'}
+  const tempId='temp-comment-'+Date.now();const optimistic={id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
+  post.comments=[...(post.comments||[]),optimistic];input.value='';updatePostElement(post);saveFeedCache();
+  try{const {data,error}=await sb.from('comments').insert([{post_id:postId,user_id:user.id,user_name:displayName(),content:text}]).select('id,post_id,user_id,user_name,content,created_at').single();if(error)throw error;const i=post.comments.findIndex(c=>c.id===tempId);if(i>=0)post.comments[i]=data;updatePostElement(post);saveFeedCache();}
+  catch(e){post.comments=post.comments.filter(c=>c.id!==tempId);input.value=text;updatePostElement(post);console.error('Comment failed:',e)}
+  finally{if(submit){submit.disabled=false;submit.textContent='Send'}}
+}
+function applyRealtimeLike(payload){
+  const row=payload?.new||payload?.old;if(!row)return;const post=postById(row.post_id);if(!post)return;const users=new Set(post.likes_users||[]);
+  if(payload.eventType==='INSERT'){users.add(row.user_id);if(post.user_id===user?.id&&row.user_id!==user.id)addNotification('like',row);}
+  else users.delete(row.user_id);
+  post.likes_users=[...users];post.likes_count=users.size;updatePostElement(post);saveFeedCache();
+}
+function applyRealtimeComment(payload){
+  const row=payload?.new||payload?.old;if(!row)return;const post=postById(row.post_id);if(!post)return;post.comments=post.comments||[];
+  if(payload.eventType==='INSERT'){
+    if(post.user_id===user?.id&&row.user_id!==user.id)addNotification('comment',row);
+    if(!post.comments.some(c=>c.id===row.id)){const i=post.comments.findIndex(c=>c._pending&&c.user_id===row.user_id&&c.content===row.content);if(i>=0)post.comments[i]=row;else post.comments.push(row)}
+  }else if(payload.eventType==='UPDATE'){const i=post.comments.findIndex(c=>c.id===row.id);if(i>=0)post.comments[i]=row}
+  else if(payload.eventType==='DELETE')post.comments=post.comments.filter(c=>c.id!==row.id);
+  post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));updatePostElement(post);saveFeedCache();
+}
 function renderFeed(){
- const f=$("feed");
- if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
+ const f=$('feed');if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
  f.innerHTML=posts.map(p=>{
-   const name = p.user_name || 'Pixel Friend';
-   const postDate = p.created_at ? new Date(p.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Just now';
-   let mediaHtml = '';
-   const media = normalizeMedia(p.media);
-   if(media?.src){
-     const safePath = media.path ? esc(media.path) : '';
-     if(media.type==='image') mediaHtml = `<div class="post-media"><img src="${esc(media.src)}" loading="lazy" decoding="async"></div>`;
-     else if(media.type==='video') mediaHtml = `<div class="post-media"><video src="${esc(media.src)}" data-media="1" data-media-type="video" data-media-path="${safePath}" controls preload="none" playsinline></video></div>`;
-     else if(media.type==='audio') mediaHtml = `<div class="post-media"><audio src="${esc(media.src)}" data-media="1" data-media-type="audio" data-media-path="${safePath}" controls preload="none"></audio></div>`;
-   }
-   const isLiked = (p.likes_users || []).includes(user?.id);
-   return `<article class="post">
-     <div class="post-head">
-       <div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div>
-       <div><b>${esc(name)}</b><div class="muted">${esc(postDate)}</div></div>
-     </div>
-     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
-     ${mediaHtml}
-     <div class="post-actions"><button class="post-action-btn ${isLiked ? 'liked' : ''}" onclick="handleLike('${p.id}')">❤️ <span>${p.likes_count || 0}</span> Likes</button></div>
-     <div class="comments-box">
-       <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (${(p.comments||[]).length})</div>
-       <div style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(c=>`<div class="comment-item"><div><b>${esc(c.user_name)}:</b>${esc(c.content)}</div></div>`).join('')}</div>
-       <form onsubmit="handleAddComment('${p.id}', event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form>
-     </div>
-   </article>`;
- }).join("");
- attachMediaRecovery();
+  const name=p.user_name||'Pixel Friend';const postDate=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now';const media=normalizeMedia(p.media);let mediaHtml='';
+  if(media?.src){const path=media.path?esc(media.path):'';if(media.type==='image')mediaHtml=`<div class="post-media"><img src="${esc(media.src)}" loading="lazy" decoding="async"></div>`;else if(media.type==='video')mediaHtml=`<div class="post-media"><video src="${esc(media.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(media.type==='audio')mediaHtml=`<div class="post-media"><audio src="${esc(media.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}
+  const liked=(p.likes_users||[]).includes(user?.id);
+  return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(postDate)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${mediaHtml}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`
+ }).join('');attachMediaRecovery();
 }
+
+function setupMessages(){
+ const list=$('chatUsersList');if(!list||!sb||!user)return;
+ const people=new Map();posts.forEach(p=>{if(p.user_id&&p.user_id!==user.id&&!people.has(p.user_id))people.set(p.user_id,p.user_name||'Pixel Friend')});
+ list.innerHTML=people.size?[...people].slice(0,20).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px">${esc(name)}</button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet.</div>';
+ list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
+}
+let activeChat=null;
+function messageBubble(m){return `<div data-message-id="${esc(m.id)}" style="align-self:${m.sender_id===user?.id?'flex-end':'flex-start'};max-width:80%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:${m.sender_id===user?.id?'#0a1d28':'#08131c'}"><div>${esc(m.content)}</div><div class="muted" style="font-size:10px;margin-top:3px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`}
+async function openChat(uid,name){activeChat={id:uid,name};$('chatHeader').textContent=name;const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Messages require the included Supabase setup SQL.</div>'}ensureMessageComposer()}
+function ensureMessageComposer(){if($('messageComposer'))return;const box=$('.chat-box');if(!box)return;const form=document.createElement('form');form.id='messageComposer';form.style.cssText='display:flex;gap:6px;margin-top:8px';form.innerHTML='<input id="messageInput" required placeholder="Write a message..." style="flex:1;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:9px;outline:none"><button class="secondary" type="submit">Send</button>';box.appendChild(form);form.onsubmit=async e=>{e.preventDefault();if(!activeChat||!sb)return;const input=$('messageInput'),text=input.value.trim();if(!text)return;try{const {error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:text}]);if(error)throw error;input.value=''}catch(err){alert('Message failed: '+err.message)}}}
+function handleIncomingMessage(m){if(activeChat?.id===m.sender_id){const box=$('chatMessagesList');if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight}}else addNotification('message',{id:m.id,user_id:m.sender_id,user_name:'Someone',created_at:m.created_at})}
+
+function subscribeToFeed(){
+ if(!sb||!user||realtimeChannel)return;try{
+  realtimeChannel=sb.channel('pixel-friends-live-v4')
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},p=>{const row=p.new;if(posts.some(x=>x.id===row.id))return;posts=[{...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]},...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);const f=$('feed');const empty=f.querySelector('.empty');if(empty)empty.remove();f.insertAdjacentHTML('afterbegin',posts[0] ? renderSinglePost(posts[0]) : '');saveFeedCache();renderOnlineFriends(posts)})
+   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},p=>{const post=postById(p.new.id);if(post){Object.assign(post,p.new,{media:normalizeMedia(p.new.media)});const el=postElement(post.id);if(el)el.outerHTML=renderSinglePost(post)}})
+   .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},p=>{posts=posts.filter(x=>x.id!==p.old?.id);postElement(p.old?.id)?.remove();saveFeedCache();renderOnlineFriends(posts)})
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
+   .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},applyRealtimeComment)
+   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},applyRealtimeComment)
+   .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},applyRealtimeComment)
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${user.id}`},p=>mergeServerNotification(p.new))
+   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'notifications',filter:`recipient_id=eq.${user.id}`},p=>mergeServerNotification(p.new))
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.id}`},p=>handleIncomingMessage(p.new))
+   .subscribe(status=>{window.__pfRealtimeReady=status==='SUBSCRIBED';if(status==='SUBSCRIBED')clearInterval(window.__pfFeedPoll)})
+ }catch(e){console.warn('Realtime setup failed:',e)}
+}
+function renderSinglePost(p){
+ const name=p.user_name||'Pixel Friend',date=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now',m=normalizeMedia(p.media);let media='';if(m?.src){const path=m.path?esc(m.path):'';if(m.type==='image')media=`<div class="post-media"><img src="${esc(m.src)}" loading="lazy" decoding="async"></div>`;else if(m.type==='video')media=`<div class="post-media"><video src="${esc(m.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(m.type==='audio')media=`<div class="post-media"><audio src="${esc(m.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}const liked=(p.likes_users||[]).includes(user?.id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(date)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${media}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`}
+function startFeedUpdates(){subscribeToFeed();clearInterval(window.__pfFeedPoll);window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},30000)}
 
 initSupabase();
 buildNav();

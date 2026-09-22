@@ -190,7 +190,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
       <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">Loading community feed…</div></div></div>
     </div>
     <div>
-      <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center">Online friends <span id="presenceStatus" class="muted" style="font-size:10px;font-weight:600">CONNECTING…</span></h3><div class="list"><div class="empty">Connecting to online status…</div></div></div>
+      <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center">Online friends <span id="presenceStatus" class="muted" style="font-size:10px;font-weight:600">CONNECTING…</span></h3><div class="list" id="onlineFriendsList"><div class="empty">Connecting to online status…</div></div></div>
     </div>
   </div>
 </section>
@@ -293,7 +293,7 @@ function renderOnlineFriends(){
   people.sort((a,b)=>a.name.localeCompare(b.name));
   const count=people.length;
   if(!count){
-    container.innerHTML='<div class="empty" style="font-size:12px;padding:12px;">No other Pixel Friends are online.</div>';
+    container.innerHTML='<div class="empty" style="font-size:12px;padding:12px;">No other Pixel Friends are online right now.</div>';
     return;
   }
   container.innerHTML=`

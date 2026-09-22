@@ -200,6 +200,11 @@ const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
 
 let sb=null, user=null, posts=[];
 let currentMedia = null;
+let feedRequest = null;
+let feedTimer = null;
+let realtimeChannel = null;
+const FEED_CACHE_KEY = "pixel_friends_feed_v1";
+const FEED_LIMIT = 20;
 
 const navItems=[
   ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
@@ -265,7 +270,8 @@ function openApp(){
  $("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
  
  showPage("home");
- requestAnimationFrame(() => { loadPosts(); });
+ loadFeedCache();
+ requestAnimationFrame(() => { loadPosts(true); startFeedUpdates(); });
 }
 
 function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
@@ -402,6 +408,7 @@ $("postBtn").onclick = async () => {
     if (error) throw error;
     const saved = {...data, likes_users:[], likes_count:0, comments:[]};
     posts = posts.map(p => p.id === tempId ? saved : p);
+    saveFeedCache();
     renderFeed();
   } catch (err) {
     posts = posts.filter(p => p.id !== tempId);
@@ -413,92 +420,85 @@ $("postBtn").onclick = async () => {
   }
 };
 
-async function loadPosts() {
-  if (!sb) return;
-  const feed = $("feed");
-  if (!posts.length) feed.innerHTML = '<div class="empty">Loading community feed…</div>';
-
+function saveFeedCache(){
+  try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0,FEED_LIMIT))); } catch(e) {}
+}
+function loadFeedCache(){
   try {
-    // Keep the first feed request small: only fields actually rendered.
-    const { data: postRows, error: postError } = await sb
-      .from('posts')
-      .select('id,user_id,user_name,text,media,created_at')
-      .order('created_at', { ascending: false })
-      .limit(25);
-
-    if (postError) throw postError;
-
-    const rows = postRows || [];
-    if (!rows.length) {
-      posts = [];
-      renderFeed();
-      renderOnlineFriends([]);
-      return;
-    }
-
-    const ids = rows.map(p => p.id);
-
-    // Fetch likes/comments for only the 25 visible posts, in parallel.
-    const [likesResult, commentsResult] = await Promise.all([
-      sb.from('likes').select('post_id,user_id').in('post_id', ids),
-      sb.from('comments').select('id,post_id,user_id,user_name,content,created_at')
-        .in('post_id', ids).order('created_at', { ascending: true })
-    ]);
-
-    if (likesResult.error) throw likesResult.error;
-    if (commentsResult.error) throw commentsResult.error;
-
-    const likesByPost = new Map();
-    (likesResult.data || []).forEach(l => {
-      if (!likesByPost.has(l.post_id)) likesByPost.set(l.post_id, []);
-      likesByPost.get(l.post_id).push(l.user_id);
-    });
-
-    const commentsByPost = new Map();
-    (commentsResult.data || []).forEach(c => {
-      if (!commentsByPost.has(c.post_id)) commentsByPost.set(c.post_id, []);
-      commentsByPost.get(c.post_id).push(c);
-    });
-
-    posts = rows.map(p => {
-      const likeUsers = likesByPost.get(p.id) || [];
-      return {
-        ...p,
-        likes_users: likeUsers,
-        likes_count: likeUsers.length,
-        comments: commentsByPost.get(p.id) || []
-      };
-    });
-
-    renderFeed();
-    renderOnlineFriends(posts);
-  } catch (err) {
-    console.error("Feed load failed:", err);
-    if (!posts.length) {
-      feed.innerHTML = '<div class="empty">Could not load the community feed. Please try again.</div>';
-    }
-  }
+    const cached=JSON.parse(localStorage.getItem(FEED_CACHE_KEY)||"[]");
+    if(Array.isArray(cached)&&cached.length){ posts=cached; renderFeed(); renderOnlineFriends(posts); return true; }
+  } catch(e) {}
+  return false;
+}
+function scheduleFeedRefresh(delay=700){
+  clearTimeout(feedTimer);
+  feedTimer=setTimeout(()=>loadPosts(true),delay);
 }
 
-function renderOnlineFriends(feedPosts) {
-  const container = document.querySelector('.grid > div:nth-child(2) .list');
-  if (!container) return;
+async function loadPosts(background=false){
+  if(!sb || !user) return;
+  if(feedRequest) return feedRequest;
+  const feed=$('feed');
+  if(!background && !posts.length) feed.innerHTML='<div class="empty">Loading community feed…</div>';
+  feedRequest=(async()=>{
+    try{
+      const {data:rows,error}=await sb.from('posts')
+        .select('id,user_id,user_name,text,media,created_at')
+        .order('created_at',{ascending:false}).limit(FEED_LIMIT);
+      if(error) throw error;
+      const list=rows||[];
+      if(!list.length){posts=[];renderFeed();renderOnlineFriends([]);saveFeedCache();return;}
+      const ids=list.map(p=>p.id);
+      // Keep related queries bounded. Comments are capped per feed request so one viral post cannot block the whole feed.
+      const [likesRes,commentsRes]=await Promise.all([
+        sb.from('likes').select('post_id,user_id').in('post_id',ids),
+        sb.from('comments').select('id,post_id,user_id,user_name,content,created_at').in('post_id',ids).order('created_at',{ascending:true}).limit(150)
+      ]);
+      if(likesRes.error) throw likesRes.error;
+      if(commentsRes.error) throw commentsRes.error;
+      const likes=new Map(), comments=new Map();
+      (likesRes.data||[]).forEach(x=>{if(!likes.has(x.post_id))likes.set(x.post_id,[]);likes.get(x.post_id).push(x.user_id)});
+      (commentsRes.data||[]).forEach(x=>{if(!comments.has(x.post_id))comments.set(x.post_id,[]);comments.get(x.post_id).push(x)});
+      const fresh=list.map(p=>({...p,likes_users:likes.get(p.id)||[],likes_count:(likes.get(p.id)||[]).length,comments:comments.get(p.id)||[]}));
+      posts=fresh;
+      renderFeed(); renderOnlineFriends(posts); saveFeedCache();
+    }catch(err){
+      console.error('Feed refresh failed:',err);
+      if(!posts.length) feed.innerHTML='<div class="empty">Could not load the community feed. Please try again.</div>';
+    }finally{feedRequest=null;}
+  })();
+  return feedRequest;
+}
 
-  // The previous version scanned the entire posts table here. Reuse the already
-  // loaded feed data instead, avoiding a second unbounded database request.
-  const map = new Map();
-  (feedPosts || []).forEach(item => {
-    if (item.user_id && item.user_id !== user?.id && !map.has(item.user_id)) {
-      map.set(item.user_id, item.user_name || 'Pixel Friend');
-    }
-  });
+function subscribeToFeed(){
+  if(!sb || !user || realtimeChannel) return;
+  try{
+    realtimeChannel=sb.channel('pixel-friends-feed')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},()=>scheduleFeedRefresh(150))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},()=>scheduleFeedRefresh(150))
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},()=>scheduleFeedRefresh(150))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},()=>scheduleFeedRefresh(250))
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},()=>scheduleFeedRefresh(250))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},()=>scheduleFeedRefresh(250))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},()=>scheduleFeedRefresh(250))
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},()=>scheduleFeedRefresh(250))
+      .subscribe(status=>{ if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; polling fallback active.'); });
+  }catch(e){console.warn('Realtime setup failed:',e);}
+}
+function startFeedUpdates(){
+  subscribeToFeed();
+  clearInterval(window.__pfFeedPoll);
+  // Realtime is preferred; this lightweight fallback keeps other users' changes visible if Realtime isn't enabled in Supabase.
+  window.__pfFeedPoll=setInterval(()=>loadPosts(true),15000);
+}
 
-  const online = Array.from(map.entries()).slice(0, 5);
-  container.innerHTML = online.length
-    ? online.map(([uid, name]) =>
-        `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;margin-bottom:6px;"><b style="font-size:13px;">${esc(name)}</b></div>`
-      ).join('')
-    : '<div class="empty" style="font-size:12px;padding:10px;">No friends online.</div>';
+function renderOnlineFriends(feedPosts){
+ const container=document.querySelector('.grid > div:nth-child(2) .list');
+ if(!container)return;
+ const map=new Map();
+ (feedPosts||[]).forEach(p=>{if(p.user_id&&p.user_id!==user?.id&&!map.has(p.user_id))map.set(p.user_id,p.user_name||'Pixel Friend');});
+ const online=Array.from(map.entries()).slice(0,5);
+ container.innerHTML=online.length?online.map(([uid,name])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;margin-bottom:6px;"><b style="font-size:13px;">${esc(name)}</b></div>`).join(''):'<div class="empty" style="font-size:12px;padding:10px;">No friends online.</div>';
 }
 
 async function handleLike(postId) {
@@ -508,6 +508,7 @@ async function handleLike(postId) {
   const oldUsers = [...(post.likes_users || [])];
   post.likes_users = hasLiked ? oldUsers.filter(id => id !== user.id) : [...oldUsers, user.id];
   post.likes_count = post.likes_users.length;
+  saveFeedCache();
   renderFeed();
   try {
     const result = hasLiked
@@ -517,6 +518,7 @@ async function handleLike(postId) {
   } catch (err) {
     post.likes_users = oldUsers;
     post.likes_count = oldUsers.length;
+    saveFeedCache();
     renderFeed();
     console.error('Like failed:', err);
   }
@@ -533,15 +535,18 @@ async function handleAddComment(postId, event) {
   const tempId = 'temp-comment-' + Date.now();
   const optimistic = {id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
   post.comments = [...(post.comments || []), optimistic];
+  saveFeedCache();
   input.value = '';
   renderFeed();
   try {
     const {data,error} = await sb.from('comments').insert([{post_id:postId,user_id:user.id,user_name:displayName(),content:text}]).select('id,post_id,user_id,user_name,content,created_at').single();
     if (error) throw error;
     post.comments = (post.comments || []).map(c => c.id === tempId ? data : c);
+    saveFeedCache();
     renderFeed();
   } catch (err) {
     post.comments = (post.comments || []).filter(c => c.id !== tempId);
+    saveFeedCache();
     input.value = text;
     renderFeed();
     console.error('Comment failed:', err);
@@ -588,6 +593,12 @@ if (sb) {
     if (session && session.user) {
       user = session.user;
       openApp();
+    }
+  });
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      user = null; posts = []; clearInterval(window.__pfFeedPoll);
+      if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel=null; }
     }
   });
 }

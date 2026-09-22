@@ -150,7 +150,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 <main class="main">
 <header class="top">
   <button class="menu-btn" id="menuBtn" aria-label="Toggle Menu">☰</button>
-  <div class="brand-mini" id="brandBtn" title="Click to Refresh Feed">
+  <div class="brand-mini" id="brandBtn" title="Click to Refresh">
     <div class="brand-icon">◉</div>
     <div>
       <div class="brand-name">PIXEL FRIENDS</div>
@@ -191,7 +191,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
           <button class="secondary" id="uploadVidBtn" style="font-size:12px">🎥 Video</button>
           <button class="secondary" id="uploadAudBtn" style="font-size:12px">🎵 Audio</button>
           <div class="spacer"></div>
-          <button class="secondary" id="refreshFeedBtn" style="font-size:12px" title="Manual Sync">🔄 Refresh Feed</button>
           <button class="primary" style="width:auto" id="postBtn">POST</button>
         </div>
       </div>
@@ -262,7 +261,6 @@ function refreshApp(){ loadPosts(); loadOnlineFriends(); }
 
 $("brandBtn").onclick = refreshApp;
 if($("sideLogo")) $("sideLogo").onclick = () => window.location.reload();
-if($("refreshFeedBtn")) $("refreshFeedBtn").onclick = refreshApp;
 
 function initSupabase(){try{if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){sb=null}}
 
@@ -438,7 +436,6 @@ $("postBtn").onclick = async () => {
     $("uploadStatus").textContent = "";
     renderMediaPreview();
     
-    // Instantly force load posts after publishing
     await loadPosts();
     await loadOnlineFriends();
   }
@@ -691,7 +688,6 @@ function subscribeToNotifications() {
   }
 }
 
-// Initializers & Session Recovery on F5 Refresh
 initSupabase();
 buildNav();
 

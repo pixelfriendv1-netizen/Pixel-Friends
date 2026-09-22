@@ -305,6 +305,7 @@ function openApp(){
  $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();$("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
  
  loadPosts();
+ loadOnlineFriends();
  subscribeToPosts();
  loadNotificationsCount(); 
  subscribeToNotifications();
@@ -434,11 +435,66 @@ async function loadPosts() {
   }
 }
 
+async function loadOnlineFriends() {
+  const container = document.querySelector('.grid > div:nth-child(2) .list');
+  if (!container) return;
+
+  if (mode !== "cloud" || !sb) {
+    container.innerHTML = '<div class="empty" style="font-size:12px;padding:10px;">Demo mode: No live tracking.</div>';
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('posts')
+    .select('user_id, user_name, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    container.innerHTML = '<div class="empty" style="font-size:12px;padding:10px;">Could not load online friends.</div>';
+    return;
+  }
+
+  const uniqueUsersMap = new Map();
+  data.forEach(item => {
+    if (item.user_id && item.user_id !== user?.id && !uniqueUsersMap.has(item.user_id)) {
+      uniqueUsersMap.set(item.user_id, {
+        name: item.user_name || 'Pixel Friend',
+        lastSeen: item.created_at
+      });
+    }
+  });
+
+  const onlineUsers = Array.from(uniqueUsersMap.entries()).slice(0, 5);
+
+  if (onlineUsers.length === 0) {
+    container.innerHTML = '<div class="empty" style="font-size:12px;padding:10px;">No friends online yet.</div>';
+    return;
+  }
+
+  container.innerHTML = onlineUsers.map(([uid, info]) => `
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #08131c; border: 1px solid #153040; border-radius: 8px; margin-bottom: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 8px; height: 8px; background: var(--good); border-radius: 50%; box-shadow: 0 0 8px var(--good);"></div>
+        <b style="font-size: 13px;">${esc(info.name)}</b>
+      </div>
+      <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="startChatWithUser('${uid}', '${esc(info.name)}')">Chat</button>
+    </div>
+  `).join('');
+}
+
+function startChatWithUser(uid, name) {
+  showPage("messages");
+  loadChatUsers();
+  setTimeout(() => {
+    selectChatUser(uid, name);
+  }, 300);
+}
+
 function subscribeToPosts() {
   if (postsSubscription) sb.removeChannel(postsSubscription);
   if (mode === "cloud" && sb) {
     postsSubscription = sb.channel('public:feed_sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { loadPosts(); loadOnlineFriends(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => loadPosts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => loadPosts())
       .subscribe();

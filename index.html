@@ -274,6 +274,8 @@ function openApp(){
  
  showPage("home");
  loadFeedCache();
+ // Load server notifications only after the authenticated user is known.
+ loadNotifications();
  requestAnimationFrame(() => { loadPosts(true); startFeedUpdates(); });
 }
 
@@ -547,23 +549,23 @@ function upsertRealtimePost(row){
 function applyRealtimeLike(payload){
   const row=payload?.new || payload?.old;
   const post=posts.find(p=>p.id===row?.post_id);
-  if(!post) return;
+  if(!post || !row) return;
   const uid=row.user_id;
   const users=new Set(post.likes_users||[]);
   if(payload.eventType==='INSERT') users.add(uid); else users.delete(uid);
-  post.likes_users=[...users]; post.likes_count=post.likes_users.length;
-  saveFeedCache(); renderFeed();
+  post.likes_users=[...users];
+  post.likes_count=post.likes_users.length;
+  updatePostDom(post);
+  saveFeedCache();
 }
 
 function applyRealtimeComment(payload){
   const row=payload?.new || payload?.old;
   const post=posts.find(p=>p.id===row?.post_id);
   if(!post || !row) return;
-  if(payload.eventType==='INSERT' && post.user_id===user?.id) addNotification('comment',row);
   post.comments=post.comments||[];
   if(payload.eventType==='INSERT'){
     if(!post.comments.some(c=>c.id===row.id)){
-      // Replace our optimistic copy when the server event arrives.
       const idx=post.comments.findIndex(c=>c._pending && c.user_id===row.user_id && c.content===row.content);
       if(idx>=0) post.comments[idx]=row; else post.comments.push(row);
     }
@@ -573,7 +575,8 @@ function applyRealtimeComment(payload){
     post.comments=post.comments.filter(c=>c.id!==row.id);
   }
   post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-  saveFeedCache(); renderFeed();
+  updatePostDom(post);
+  saveFeedCache();
 }
 
 async function loadNotifications(){
@@ -652,8 +655,10 @@ function subscribeToFeed(){
     realtimeChannel=sb.channel('pixel-friends-live-v5')
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>{
         const row=payload.new; if(!row?.id || posts.some(x=>x.id===row.id))return;
+        const pendingIndex=posts.findIndex(x=>x._pending && x.user_id===row.user_id && (x.text||null)===(row.text||null));
         const fresh={...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]};
-        posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
+        if(pendingIndex>=0) posts[pendingIndex]=fresh;
+        else posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
         const feed=$('feed');
         const empty=feed.querySelector('.empty'); if(empty)empty.remove();
         feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
@@ -688,6 +693,28 @@ function startFeedUpdates(){
   window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},30000);
 }
 
+function commentHtml(c){
+  const name=esc(c?.user_name||'Pixel Friend');
+  const text=esc(c?.content||'');
+  const id=c?.id?esc(c.id):'';
+  return `<div class="comment-item" data-comment-id="${id}"><div><b>${name}:</b> ${text}</div></div>`;
+}
+
+function updatePostDom(post){
+  const el=postElement(post?.id); if(!el) return;
+  const likeBtn=el.querySelector('[data-action="like"]');
+  if(likeBtn){
+    const liked=(post.likes_users||[]).includes(user?.id);
+    likeBtn.classList.toggle('liked',liked);
+    const count=likeBtn.querySelector('[data-like-count]');
+    if(count) count.textContent=String(post.likes_count||0);
+  }
+  const commentsBox=el.querySelector('[data-comments]');
+  const count=el.querySelector('[data-comment-count]');
+  if(commentsBox) commentsBox.innerHTML=(post.comments||[]).map(commentHtml).join('');
+  if(count) count.textContent=String((post.comments||[]).length);
+}
+
 function renderFeed(){
  const f=$('feed');if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
  f.innerHTML=posts.map(p=>{
@@ -715,7 +742,6 @@ function renderSinglePost(p){
 
 initSupabase();
 buildNav();
-loadNotifications();
 
 if (sb) {
   sb.auth.getSession().then(({ data: { session } }) => {

@@ -437,17 +437,24 @@ $("postBtn").onclick = async () => {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
     
+    $("postText").value = "";
+    currentMedia = null;
+    $("uploadStatus").textContent = "";
+    renderMediaPreview();
+    
+    // Instantly force load posts after publishing
     await loadPosts();
   }
-  $("postText").value = "";
-  currentMedia = null;
-  $("uploadStatus").textContent = "";
-  renderMediaPreview();
 };
 
 async function loadPosts() {
   if (mode === "cloud" && sb) {
-    const { data, error } = await sb.from('posts').select('*, likes(user_id), comments(*)').order('created_at', { ascending: false }).limit(20);
+    const { data, error } = await sb
+      .from('posts')
+      .select('*, likes(user_id), comments(*)')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
     if (!error && data) { 
       posts = data.map(p => ({
         ...p,
@@ -467,7 +474,7 @@ function startFeedPolling() {
       loadPosts();
       loadOnlineFriends();
     }
-  }, 5000);
+  }, 4000); // Polling checks every 4 seconds
 }
 
 async function loadOnlineFriends() {

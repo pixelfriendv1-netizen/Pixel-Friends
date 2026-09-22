@@ -576,114 +576,118 @@ function applyRealtimeComment(payload){
   saveFeedCache(); renderFeed();
 }
 
-function loadNotifications(){
-  try{ notifications=JSON.parse(localStorage.getItem(NOTIF_KEY)||"[]"); }catch(e){ notifications=[]; }
-  if(!Array.isArray(notifications)) notifications=[];
+async function loadNotifications(){
+  if(!user || !sb){ renderNotifications(); return; }
+  try{
+    const {data,error}=await sb.from('notifications')
+      .select('id,user_id,type,title,message,is_read,read,created_at,target_id')
+      .eq('user_id',user.id)
+      .order('created_at',{ascending:false})
+      .limit(50);
+    if(error) throw error;
+    notifications=(data||[]).map(n=>({
+      id:n.id,
+      type:n.type,
+      title:n.title,
+      text:n.message || n.title || 'New activity',
+      created_at:n.created_at,
+      read:Boolean(n.is_read ?? n.read),
+      target_id:n.target_id
+    }));
+    saveNotifications();
+  }catch(e){
+    // Keep cached notifications available if the network is temporarily unavailable.
+    try{ notifications=JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]'); }catch(_){ notifications=[]; }
+  }
   renderNotifications();
 }
 function saveNotifications(){
   try{ localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications.slice(0,50))); }catch(e){}
 }
-function addNotification(type,row){
-  if(!user || !row || row.user_id===user.id) return;
-  const id=`${type}:${row.id}`;
-  if(notifications.some(n=>n.id===id)) return;
-  const actor=row.user_name||'Pixel Friend';
-  const text=type==='like' ? `${actor} liked your post.` : `${actor} commented on your post${row.content?`: ${row.content}`:'.'}`;
-  notifications.unshift({id,type,text,created_at:row.created_at||new Date().toISOString(),read:false});
+function notificationFromRow(row){
+  if(!row) return null;
+  return {
+    id:row.id,
+    type:row.type||'activity',
+    title:row.title||'New activity',
+    text:row.message||row.title||'New activity',
+    created_at:row.created_at||new Date().toISOString(),
+    read:Boolean(row.is_read ?? row.read),
+    target_id:row.target_id||null
+  };
+}
+function mergeServerNotification(row){
+  if(!row || !user || row.user_id!==user.id) return;
+  const n=notificationFromRow(row); if(!n)return;
+  const idx=notifications.findIndex(x=>String(x.id)===String(n.id));
+  if(idx>=0) notifications[idx]=n; else notifications.unshift(n);
   notifications=notifications.slice(0,50);
-  saveNotifications(); renderNotifications();
-  if($('topBell')) $('topBell').animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:350});
+  saveNotifications();
+  renderNotifications();
+  if(!n.read && $('topBell')){
+    $('topBell').animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:350});
+  }
 }
 function renderNotifications(){
   const unread=notifications.filter(n=>!n.read).length;
   const badge=$('notifBadge');
   if(badge){badge.textContent=unread>99?'99+':String(unread);badge.style.display=unread?'flex':'none';}
   const list=$('notificationList'); if(!list)return;
-  if(!notifications.length){list.innerHTML='<div class="empty">You\'re all caught up.</div>';return;}
-  list.innerHTML=notifications.map(n=>`<div class="comment-item" style="padding:12px;border:1px solid var(--line);background:${n.read?'#07111a':'#0a1d28'}"><div><b>${esc(n.text)}</b><div class="muted" style="margin-top:3px;font-size:11px">${esc(new Date(n.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div></div>`).join('');
+  if(!notifications.length){list.innerHTML='<div class="empty">You’re all caught up.</div>';return;}
+  list.innerHTML=notifications.map(n=>`<div class="comment-item" data-notification-id="${esc(n.id)}" style="padding:12px;border:1px solid var(--line);background:${n.read?'#07111a':'#0a1d28'}"><div><b>${esc(n.title||n.text)}</b><div style="margin-top:3px">${esc(n.text||'')}</div><div class="muted" style="margin-top:3px;font-size:11px">${esc(new Date(n.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div></div>`).join('');
 }
-function markNotificationsRead(){notifications=notifications.map(n=>({...n,read:true}));saveNotifications();renderNotifications();}
+async function markNotificationsRead(){
+  const unreadIds=notifications.filter(n=>!n.read).map(n=>n.id).filter(Boolean);
+  notifications=notifications.map(n=>({...n,read:true}));
+  saveNotifications(); renderNotifications();
+  if(!sb || !user || !unreadIds.length)return;
+  try{
+    await sb.from('notifications').update({is_read:true,read:true}).eq('user_id',user.id).in('id',unreadIds);
+  }catch(e){ console.warn('Could not mark notifications read:',e); }
+}
 
 function subscribeToFeed(){
-  if(!sb || !user || realtimeChannel) return;
+  if(!sb || !user || realtimeChannel)return;
   try{
-    realtimeChannel=sb.channel('pixel-friends-feed-live')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>upsertRealtimePost(payload.new))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>upsertRealtimePost(payload.new))
+    realtimeChannel=sb.channel('pixel-friends-live-v5')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>{
+        const row=payload.new; if(!row?.id || posts.some(x=>x.id===row.id))return;
+        const fresh={...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]};
+        posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
+        const feed=$('feed');
+        const empty=feed.querySelector('.empty'); if(empty)empty.remove();
+        feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
+        attachMediaRecovery(); saveFeedCache(); renderOnlineFriends(posts);
+      })
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>{
+        const post=postById(payload.new?.id); if(!post)return;
+        Object.assign(post,payload.new,{media:normalizeMedia(payload.new.media)});
+        const el=postElement(post.id); if(el)el.outerHTML=renderSinglePost(post);
+        attachMediaRecovery(); saveFeedCache();
+      })
       .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},payload=>{
-        posts=posts.filter(p=>p.id!==payload.old?.id); saveFeedCache(); renderFeed(); renderOnlineFriends(posts);
+        const id=payload.old?.id; posts=posts.filter(x=>x.id!==id); postElement(id)?.remove(); saveFeedCache(); renderOnlineFriends(posts);
       })
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
       .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},applyRealtimeComment)
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},applyRealtimeComment)
       .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},applyRealtimeComment)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
       .subscribe(status=>{
-        window.__pfRealtimeReady = status==='SUBSCRIBED';
-        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; 30s fallback polling active.');
+        window.__pfRealtimeReady=status==='SUBSCRIBED';
+        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; fallback polling active.');
       });
   }catch(e){console.warn('Realtime setup failed:',e);}
 }
 function startFeedUpdates(){
   subscribeToFeed();
   clearInterval(window.__pfFeedPoll);
-  // Realtime updates the UI immediately. Polling is only a safety net.
-  window.__pfFeedPoll=setInterval(()=>loadPosts(true),30000);
+  window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},30000);
 }
 
-function renderOnlineFriends(feedPosts){
- const container=document.querySelector('.grid > div:nth-child(2) .list');
- if(!container)return;
- const map=new Map();
- (feedPosts||[]).forEach(p=>{if(p.user_id&&p.user_id!==user?.id&&!map.has(p.user_id))map.set(p.user_id,p.user_name||'Pixel Friend');});
- const online=Array.from(map.entries()).slice(0,5);
- container.innerHTML=online.length?online.map(([uid,name])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;margin-bottom:6px;"><b style="font-size:13px;">${esc(name)}</b></div>`).join(''):'<div class="empty" style="font-size:12px;padding:10px;">No friends online.</div>';
-}
-
-function postById(id){return posts.find(p=>p.id===id)}
-function postElement(id){return document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`)}
-function commentHtml(c){return `<div class="comment-item" data-comment-id="${esc(c.id)}"><div><b>${esc(c.user_name||'Pixel Friend')}:</b> ${esc(c.content||'')}</div></div>`}
-function updatePostElement(post){
-  const el=postElement(post.id); if(!el)return false;
-  const likeBtn=el.querySelector('[data-action="like"]');
-  if(likeBtn){likeBtn.classList.toggle('liked',(post.likes_users||[]).includes(user?.id));const count=likeBtn.querySelector('[data-like-count]');if(count)count.textContent=post.likes_count||0;}
-  const cc=el.querySelector('[data-comment-count]');if(cc)cc.textContent=(post.comments||[]).length;
-  const list=el.querySelector('[data-comments]');if(list)list.innerHTML=(post.comments||[]).map(commentHtml).join('');
-  return true;
-}
-async function handleLike(postId){
-  const post=postById(postId);if(!post||!sb||!user||post._pending||post._likeBusy)return;
-  post._likeBusy=true;const liked=(post.likes_users||[]).includes(user.id);const old=[...(post.likes_users||[])];
-  post.likes_users=liked?old.filter(id=>id!==user.id):[...old,user.id];post.likes_count=post.likes_users.length;updatePostElement(post);saveFeedCache();
-  try{const r=liked?await sb.from('likes').delete().eq('post_id',postId).eq('user_id',user.id):await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);if(r.error)throw r.error;}
-  catch(e){post.likes_users=old;post.likes_count=old.length;updatePostElement(post);saveFeedCache();console.error('Like failed:',e)}
-  finally{post._likeBusy=false}
-}
-async function handleAddComment(postId,event){
-  event.preventDefault();const post=postById(postId);const form=event.target;const input=form.querySelector('input');const text=input?.value.trim();if(!post||!text||!sb||!user||post._pending)return;
-  const submit=event.submitter;if(submit){submit.disabled=true;submit.textContent='…'}
-  const tempId='temp-comment-'+Date.now();const optimistic={id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
-  post.comments=[...(post.comments||[]),optimistic];input.value='';updatePostElement(post);saveFeedCache();
-  try{const {data,error}=await sb.from('comments').insert([{post_id:postId,user_id:user.id,user_name:displayName(),content:text}]).select('id,post_id,user_id,user_name,content,created_at').single();if(error)throw error;const i=post.comments.findIndex(c=>c.id===tempId);if(i>=0)post.comments[i]=data;updatePostElement(post);saveFeedCache();}
-  catch(e){post.comments=post.comments.filter(c=>c.id!==tempId);input.value=text;updatePostElement(post);console.error('Comment failed:',e)}
-  finally{if(submit){submit.disabled=false;submit.textContent='Send'}}
-}
-function applyRealtimeLike(payload){
-  const row=payload?.new||payload?.old;if(!row)return;const post=postById(row.post_id);if(!post)return;const users=new Set(post.likes_users||[]);
-  if(payload.eventType==='INSERT'){users.add(row.user_id);if(post.user_id===user?.id&&row.user_id!==user.id)addNotification('like',row);}
-  else users.delete(row.user_id);
-  post.likes_users=[...users];post.likes_count=users.size;updatePostElement(post);saveFeedCache();
-}
-function applyRealtimeComment(payload){
-  const row=payload?.new||payload?.old;if(!row)return;const post=postById(row.post_id);if(!post)return;post.comments=post.comments||[];
-  if(payload.eventType==='INSERT'){
-    if(post.user_id===user?.id&&row.user_id!==user.id)addNotification('comment',row);
-    if(!post.comments.some(c=>c.id===row.id)){const i=post.comments.findIndex(c=>c._pending&&c.user_id===row.user_id&&c.content===row.content);if(i>=0)post.comments[i]=row;else post.comments.push(row)}
-  }else if(payload.eventType==='UPDATE'){const i=post.comments.findIndex(c=>c.id===row.id);if(i>=0)post.comments[i]=row}
-  else if(payload.eventType==='DELETE')post.comments=post.comments.filter(c=>c.id!==row.id);
-  post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));updatePostElement(post);saveFeedCache();
-}
 function renderFeed(){
  const f=$('feed');if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
  f.innerHTML=posts.map(p=>{
@@ -704,28 +708,10 @@ let activeChat=null;
 function messageBubble(m){return `<div data-message-id="${esc(m.id)}" style="align-self:${m.sender_id===user?.id?'flex-end':'flex-start'};max-width:80%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:${m.sender_id===user?.id?'#0a1d28':'#08131c'}"><div>${esc(m.content)}</div><div class="muted" style="font-size:10px;margin-top:3px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`}
 async function openChat(uid,name){activeChat={id:uid,name};$('chatHeader').textContent=name;const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Messages require the included Supabase setup SQL.</div>'}ensureMessageComposer()}
 function ensureMessageComposer(){if($('messageComposer'))return;const box=$('.chat-box');if(!box)return;const form=document.createElement('form');form.id='messageComposer';form.style.cssText='display:flex;gap:6px;margin-top:8px';form.innerHTML='<input id="messageInput" required placeholder="Write a message..." style="flex:1;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:9px;outline:none"><button class="secondary" type="submit">Send</button>';box.appendChild(form);form.onsubmit=async e=>{e.preventDefault();if(!activeChat||!sb)return;const input=$('messageInput'),text=input.value.trim();if(!text)return;try{const {error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:text}]);if(error)throw error;input.value=''}catch(err){alert('Message failed: '+err.message)}}}
-function handleIncomingMessage(m){if(activeChat?.id===m.sender_id){const box=$('chatMessagesList');if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight}}else addNotification('message',{id:m.id,user_id:m.sender_id,user_name:'Someone',created_at:m.created_at})}
+function handleIncomingMessage(m){if(activeChat?.id===m.sender_id){const box=$('chatMessagesList');if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight}}}
 
-function subscribeToFeed(){
- if(!sb||!user||realtimeChannel)return;try{
-  realtimeChannel=sb.channel('pixel-friends-live-v4')
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},p=>{const row=p.new;if(posts.some(x=>x.id===row.id))return;posts=[{...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]},...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);const f=$('feed');const empty=f.querySelector('.empty');if(empty)empty.remove();f.insertAdjacentHTML('afterbegin',posts[0] ? renderSinglePost(posts[0]) : '');saveFeedCache();renderOnlineFriends(posts)})
-   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},p=>{const post=postById(p.new.id);if(post){Object.assign(post,p.new,{media:normalizeMedia(p.new.media)});const el=postElement(post.id);if(el)el.outerHTML=renderSinglePost(post)}})
-   .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},p=>{posts=posts.filter(x=>x.id!==p.old?.id);postElement(p.old?.id)?.remove();saveFeedCache();renderOnlineFriends(posts)})
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
-   .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},applyRealtimeComment)
-   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},applyRealtimeComment)
-   .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},applyRealtimeComment)
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${user.id}`},p=>mergeServerNotification(p.new))
-   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'notifications',filter:`recipient_id=eq.${user.id}`},p=>mergeServerNotification(p.new))
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.id}`},p=>handleIncomingMessage(p.new))
-   .subscribe(status=>{window.__pfRealtimeReady=status==='SUBSCRIBED';if(status==='SUBSCRIBED')clearInterval(window.__pfFeedPoll)})
- }catch(e){console.warn('Realtime setup failed:',e)}
-}
 function renderSinglePost(p){
  const name=p.user_name||'Pixel Friend',date=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now',m=normalizeMedia(p.media);let media='';if(m?.src){const path=m.path?esc(m.path):'';if(m.type==='image')media=`<div class="post-media"><img src="${esc(m.src)}" loading="lazy" decoding="async"></div>`;else if(m.type==='video')media=`<div class="post-media"><video src="${esc(m.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(m.type==='audio')media=`<div class="post-media"><audio src="${esc(m.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}const liked=(p.likes_users||[]).includes(user?.id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(date)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${media}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`}
-function startFeedUpdates(){subscribeToFeed();clearInterval(window.__pfFeedPoll);window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},30000)}
 
 initSupabase();
 buildNav();

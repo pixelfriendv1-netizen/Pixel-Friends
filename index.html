@@ -195,10 +195,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   </div>
 </section>
 
-<section class="page" id="friends"><h2 class="page-title">Friends</h2><p class="page-sub">Build your own network.</p><div class="card"><div class="empty">You don't have any friends yet.</div></div></section>
 <section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div><div class="chat-messages" id="chatMessagesList"><div class="empty">Select a user, then type a message or paste an image with Ctrl+V.</div></div><form id="messageComposer" style="margin-top:8px;display:grid;gap:6px"><div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div style="display:flex;gap:6px;align-items:flex-end"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Select a friend, then type or paste…" style="flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none"></textarea><div style="display:grid;gap:5px"><button type="button" class="secondary" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="button" id="sendMessageBtn">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span></form></div></div></div></section>
 <section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
-<section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
 <section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Preferences.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div></div></section>
 </main></div>
@@ -221,9 +219,8 @@ const FEED_CACHE_KEY = "pixel_friends_feed_v1";
 const FEED_LIMIT = 20;
 
 const navItems=[
-  ["home","⌂","Home"],["friends","♢","Friends"],["messages","✉","Messages"],
-  ["notifications","◉","Notifications"],["playlist","♫","Playlist"],
-  ["profile","◎","Profile"],["settings","⚙","Settings"]
+  ["home","⌂","Home"],["messages","✉","Messages"],
+  ["notifications","◉","Notifications"],["profile","◎","Profile"],["settings","⚙","Settings"]
 ];
 
 function $(id){return document.getElementById(id)}

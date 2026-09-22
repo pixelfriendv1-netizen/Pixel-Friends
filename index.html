@@ -196,7 +196,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 </section>
 
 <section class="page" id="friends"><h2 class="page-title">Friends</h2><p class="page-sub">Build your own network.</p><div class="card"><div class="empty">You don't have any friends yet.</div></div></section>
-<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div><div class="chat-messages" id="chatMessagesList"><div class="empty">No conversation selected.</div></div></div></div></div></section>
+<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div><div class="chat-messages" id="chatMessagesList"><div class="empty">Select a user, then type a message or paste an image with Ctrl+V.</div></div><form id="messageComposer" style="margin-top:8px;display:grid;gap:6px"><div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div style="display:flex;gap:6px;align-items:flex-end"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Select a friend, then type or paste…" style="flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none"></textarea><div style="display:grid;gap:5px"><button type="button" class="secondary" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="submit">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span></form></div></div></div></section>
 <section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
 <section class="page" id="playlist"><h2 class="page-title">Playlist</h2><p class="page-sub">Music corner.</p><div class="card"><div class="empty">No tracks added yet.</div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
@@ -1038,10 +1038,18 @@ function handleChatPaste(e){
   const fileItem=items.find(i=>i.kind==='file' && /^(image|video|audio)\//.test(i.type));
   if(fileItem){
     const file=fileItem.getAsFile();
-    if(file){e.preventDefault();setChatAttachment(file);}
+    if(file){
+      e.preventDefault();
+      setChatAttachment(file);
+      const status=$('messageSendStatus');
+      if(status){status.style.display='inline';status.style.color='var(--good)';status.textContent='Pasted attachment ready — press Send.';}
+      return;
+    }
   }
 }
+
 async function openChat(uid,name){
+  ensureMessageComposer();
   activeChat={id:String(uid),name};
   $('chatHeader').innerHTML='💬 '+esc(name)+' <span class="muted" style="font-size:11px;font-weight:400">— conversation</span>';
   const input=$('messageInput');if(input)input.placeholder='Type a message or paste an image…';
@@ -1056,17 +1064,31 @@ async function openChat(uid,name){
   ensureMessageComposer();
 }
 function ensureMessageComposer(){
-  const box=$('.chat-box');if(!box||$('messageComposer'))return;
-  const form=document.createElement('form');form.id='messageComposer';form.style.cssText='margin-top:8px;display:grid;gap:6px';
-  form.innerHTML=`<div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div style="display:flex;gap:6px;align-items:flex-end"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Select a friend, then type or paste…" style="flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none"></textarea><div style="display:grid;gap:5px"><button type="button" class="secondary" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="submit">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span>`;
-  box.appendChild(form);
-  $('chatAttachBtn').onclick=()=>$('chatFileInput').click();
-  $('chatFileInput').onchange=e=>{if(e.target.files?.[0])setChatAttachment(e.target.files[0]);};
-  $('messageInput').addEventListener('paste',handleChatPaste);
+  const box=$('.chat-box');
+  if(!box) return;
+  const form=$('messageComposer');
+  if(!form) return;
+  const attachBtn=$('chatAttachBtn');
+  const fileInput=$('chatFileInput');
+  const input=$('messageInput');
+  if(!attachBtn || !fileInput || !input) return;
+  if(form.dataset.ready==='1') return;
+  form.dataset.ready='1';
+  attachBtn.onclick=()=>fileInput.click();
+  fileInput.onchange=e=>{if(e.target.files?.[0])setChatAttachment(e.target.files[0]);};
+  input.addEventListener('paste',handleChatPaste);
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter' && !e.shiftKey){e.preventDefault();form.requestSubmit();}
+  });
   form.onsubmit=async e=>{
     e.preventDefault();
-    if(!activeChat||!sb||!user)return;
-    const input=$('messageInput'),status=$('messageSendStatus'),text=input.value.trim(),file=window.__chatAttachment;
+    if(!activeChat){
+      const st=$('messageSendStatus');
+      st.style.display='inline'; st.style.color='var(--muted)'; st.textContent='Please select a user first.';
+      return;
+    }
+    if(!sb||!user)return;
+    const status=$('messageSendStatus'),text=input.value.trim(),file=window.__chatAttachment;
     if(!text && !file)return;
     status.style.display='inline';status.style.color='var(--muted)';status.textContent=file?'Uploading…':'Sending…';
     try{
@@ -1075,11 +1097,23 @@ function ensureMessageComposer(){
       const payload={kind:media&&text?'mixed':media?'media':'text',text:text||'',media:media||null};
       const {data,error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:JSON.stringify(payload)}]).select('id,sender_id,recipient_id,content,created_at').single();
       if(error)throw error;
-      if(data){const msgBox=$('chatMessagesList');const empty=msgBox.querySelector('.empty');if(empty)empty.remove();if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){msgBox.insertAdjacentHTML('beforeend',messageBubble(data));msgBox.scrollTop=msgBox.scrollHeight;}}
+      if(data){
+        const msgBox=$('chatMessagesList');
+        const empty=msgBox.querySelector('.empty');
+        if(empty)empty.remove();
+        if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){
+          msgBox.insertAdjacentHTML('beforeend',messageBubble(data));
+          msgBox.scrollTop=msgBox.scrollHeight;
+        }
+      }
       input.value='';clearChatAttachment();status.style.display='none';
-    }catch(err){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Failed: '+(err?.message||'Unknown error');console.error('Message send failed:',err);}
+    }catch(err){
+      status.style.display='inline';status.style.color='var(--danger)';status.textContent='Failed: '+(err?.message||'Unknown error');
+      console.error('Message send failed:',err);
+    }
   };
 }
+
 function handleIncomingMessage(m){
   if(!m||!activeChat)return;
   const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);

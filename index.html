@@ -1,1254 +1,427 @@
 
-
 <!doctype html>
 <html lang="en">
 <head>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preconnect" href="https://koljxgkatllfexwoxnfi.supabase.co" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Friends — Cyber Community</title>
+<title>My Phone Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#03060b;--panel:#071019;--panel2:#0b1520;--line:#183142;--cyan:#39e7ff;--blue:#5c7cff;--pink:#ff4fd8;--text:#eaf7ff;--muted:#7691a5;--good:#49f0a0;--danger:#ff587c;--shadow:0 0 35px #0008}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#09253a55,transparent 35%),linear-gradient(135deg,#02050a,#06101a 55%,#03070d);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif;min-height:100vh}
-button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
-#auth{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-box{width:min(460px,100%);background:#061019ee;border:1px solid #1b4357;border-radius:18px;padding:30px;box-shadow:0 0 70px #00d9ff18}
-.logo{font-weight:900;letter-spacing:4px;color:var(--cyan);font-size:28px}.sub{color:var(--muted);margin:5px 0 25px}.tabs{display:flex;gap:8px;margin-bottom:20px}.tabs button,.nav button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:10px 14px;border-radius:9px;position:relative}
-.tabs button.active,.nav button.active{color:var(--cyan);border-color:#2cc9e8;background:#0a1d28}
-.field{margin:12px 0}.field label{display:block;color:#9eb7c8;font-size:12px;margin-bottom:6px}.field input,.composer textarea,.search{width:100%;background:#03080d;border:1px solid #183647;color:var(--text);border-radius:9px;padding:12px;outline:none}.field input:focus,.composer textarea:focus,.search:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #39e7ff15}
-.primary{width:100%;border:0;border-radius:9px;padding:12px;background:linear-gradient(90deg,#1fcbe8,#6174ff);color:white;font-weight:800;margin-top:8px}.secondary{border:1px solid var(--line);background:#09141e;color:#c9dbe6;border-radius:9px;padding:10px 13px}.status{min-height:22px;margin-top:12px;color:var(--danger)}
-#app{display:none;min-height:100vh}
+:root{--bg:#050b11;--panel:#08131d;--panel2:#0b1823;--line:#17384a;--cyan:#39e7ff;--green:#55e39a;--text:#e8f7ff;--muted:#7da2b5;--red:#ff6577}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0%,#0a2030 0,#050b11 42%);color:var(--text);font-family:Arial,sans-serif}button,input{font:inherit}button{cursor:pointer}
+.top{height:70px;position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:12px 20px;background:#050b11ee;border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.menu,.refresh{width:42px;height:42px;border:1px solid #1d526d;border-radius:9px;background:#071521;color:var(--cyan)}.brand{display:flex;align-items:center;gap:10px}.logo{width:38px;height:38px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan)}.name{font-weight:900;letter-spacing:1.4px;color:var(--cyan)}.sub{font-size:9px;color:var(--muted);letter-spacing:1px}.spacer{flex:1}.online{border:1px solid var(--line);padding:9px 12px;border-radius:20px;font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 9px var(--green)}
+.layout{display:flex;min-height:calc(100vh - 70px)}aside{width:235px;border-right:1px solid var(--line);padding:20px 13px;background:#061019;position:sticky;top:70px;height:calc(100vh - 70px)}nav{display:grid;gap:6px}nav button{padding:12px;border:1px solid transparent;border-radius:9px;text-align:left;background:transparent;color:var(--muted)}nav button.active,nav button:hover{background:#091a26;border-color:#1d526d;color:var(--text)}
+.device{margin-top:24px;border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--panel)}main{flex:1;min-width:0}.page{display:none;max-width:1280px;margin:auto;padding:26px}.page.active{display:block}h1{margin:0 0 7px;font-size:28px}h2{margin-top:0}.lead{color:var(--muted);margin:0 0 20px}.hero,.card{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:18px}.hero{margin-bottom:14px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.two{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px}.label{color:var(--muted);font-size:12px}.value{font-size:28px;font-weight:800;margin-top:7px}.good{color:var(--green)}.muted,.small{color:var(--muted);font-size:12px}.row{display:flex;justify-content:space-between;gap:15px;padding:10px 0;border-bottom:1px solid #122a38}.row:last-child{border-bottom:0}.bars{height:170px;display:flex;align-items:end;gap:8px;padding-top:20px}.bar{flex:1;min-width:12px;background:linear-gradient(to top,#0a5369,var(--cyan));border-radius:4px 4px 0 0;position:relative}.bar b{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted)}.progress{height:10px;background:#102532;border-radius:20px;overflow:hidden;margin:14px 0}.progress span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:20px}.app{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #122a38}.app:last-child{border:0}
+.device-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.device-select{min-width:260px;padding:11px;background:#071521;color:var(--text);border:1px solid #1d526d;border-radius:9px}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid var(--line);border-radius:20px;font-size:12px}.device-dot{width:8px;height:8px;border-radius:50%;background:#607887}.device-dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.device-table{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden}.device-head,.device-row{display:grid;grid-template-columns:1.4fr .8fr .7fr 1fr 1.2fr;gap:10px;padding:12px 14px;align-items:center}.device-head{background:#071521;color:var(--muted);font-size:11px;text-transform:uppercase}.device-row{border-top:1px solid #102a39;font-size:12px}.device-row button{background:transparent;border:0;color:var(--cyan);text-align:left}.online-text{color:var(--green);font-weight:700}.offline-text{color:var(--muted)}
+.command-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.command-card{border:1px solid var(--line);border-radius:12px;padding:15px;background:#07121b}.command-card h4{margin:0 0 7px}.command-card p{font-size:12px;color:var(--muted);min-height:48px;line-height:1.45}.command-btn,.primary{border:1px solid #1d687d;background:#082331;color:var(--cyan);padding:10px 12px;border-radius:8px}.command-btn:hover,.primary:hover{background:#0b3143}.danger{color:#ff9aa6;border-color:#63303a}.note{margin-top:14px;padding:12px;border:1px solid #183043;border-radius:10px;background:#071018;color:var(--muted);font-size:12px;line-height:1.5}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px}.login-box{width:min(460px,100%);border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:25px;box-shadow:0 0 50px #0008}.login-logo{color:var(--cyan);font-weight:900;letter-spacing:2px;font-size:18px;margin-bottom:6px}.field{display:grid;gap:6px;margin:13px 0}.field label{font-size:11px;color:var(--muted);text-transform:uppercase}.field input{width:100%;padding:12px;background:#030b11;color:var(--text);border:1px solid var(--line);border-radius:8px;outline:0}.field input:focus{border-color:var(--cyan)}.error{color:#ff9aa6;font-size:12px;margin-top:10px}.hidden{display:none!important}.statusline{margin-top:12px;font-size:12px;color:var(--muted)}
+.toast{position:fixed;right:18px;bottom:18px;z-index:100;background:#07151f;border:1px solid #1d526d;color:var(--text);padding:12px 15px;border-radius:10px;display:none;max-width:360px}.toast.show{display:block}
+@media(max-width:900px){aside{position:fixed;left:-250px;z-index:30;transition:.2s}aside.open{left:0}.layout{display:block}.grid{grid-template-columns:repeat(2,1fr)}.command-grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.device-head{display:none}.device-row{grid-template-columns:1fr 1fr}.page{padding:18px 14px 80px}}
+@media(max-width:600px){.grid,.command-grid{grid-template-columns:1fr}.online{display:none}.top{padding:10px 12px}.name{font-size:13px}.sub{display:none}.value{font-size:25px}.device-select{min-width:100%;width:100%}}
 
-.shell{display:block;min-height:100vh}
-.side{border-right:1px solid var(--line);background:#040a10f8;padding:22px 14px;position:fixed;top:0;left:0;bottom:0;width:270px;z-index:30;display:flex;flex-direction:column;justify-content:space-between;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:5px 0 35px rgba(0,0,0,0.8)}
-.side.open{transform:translateX(0)}
-.side .logo{font-size:20px;padding:0 10px 25px;cursor:pointer}
-.nav{display:grid;gap:7px}
-.nav button{text-align:left;border-color:transparent}
-.nav button.active{border-color:#21485b}
-.side-bottom{padding-top:18px;border-top:1px solid var(--line)}
-.profile-mini{padding:12px;border:1px solid var(--line);border-radius:10px;background:#08131d;margin-bottom:8px}
-.profile-mini b{display:block}
-
-.main{min-width:0}
-.top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:12px 22px;background:#050b11dd;position:sticky;top:0;z-index:5}
-.spacer{flex:1}
-.menu-btn{width:42px;height:42px;border:1px solid #1d526d;border-radius:9px;background:#071521;color:var(--cyan);font-size:22px;display:grid;place-items:center}
-.brand-mini{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
-.brand-icon{width:38px;height:38px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);box-shadow:0 0 16px #39e7ff33;font-size:17px}
-.brand-name{font-weight:900;letter-spacing:1.5px;color:var(--cyan);font-size:16px}
-.brand-sub{font-size:8px;letter-spacing:1px;color:#7ca5ba}
-
-.header-actions { display: flex; align-items: center; gap: 8px; }
-.bell-btn { width: 40px; height: 40px; background: #071521; border: 1px solid #1d526d; color: var(--text); border-radius: 10px; display: grid; place-items: center; position: relative; cursor: pointer; }
-.bell-btn .notif-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid #050b11}
-.profile-btn{display:flex;align-items:center;gap:8px;background:#071521;border:1px solid #1d526d;color:var(--text);border-radius:10px;padding:5px 12px 5px 6px;font-weight:700}
-.profile-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:900}
-
-.page{display:none;padding:26px;max-width:1300px;margin:auto}
-.page.active{display:block}
-.hero{border:1px solid #1d4b60;border-radius:18px;padding:24px 28px;background:linear-gradient(135deg,#081d2a,#08111b 60%,#140c22);position:relative;overflow:hidden;margin-top:6px}
-.hero h1{font-size:clamp(24px,3.5vw,40px);margin:0 0 6px;line-height:1.2}
-.hero p{color:#8ea9b9;max-width:650px;margin:0}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
-.card{background:#07111aee;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
-.card h3{margin:0 0 14px}
-.composer textarea{min-height:90px;resize:vertical}
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-.feed{display:grid;gap:12px;margin-top:12px}
-.post{border:1px solid #173344;border-radius:12px;padding:15px;background:#08131c}
-.post-head{display:flex;gap:10px;align-items:center}
-.avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900}
-.muted{color:var(--muted)}
-.post-body{padding:12px 0}
-.media-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.preview-item{position:relative;max-width:100%;width:100%}
-.preview-item img,.preview-item video,.preview-item audio{max-width:100%;width:100%;border-radius:8px;border:1px solid var(--line)}
-.preview-item .remove-btn{position:absolute;top:-8px;right:-8px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center;z-index:5}
-.post-media img,.post-media video{max-width:100%;border-radius:8px;margin-top:10px}
-.post-media audio{width:100%;margin-top:10px}.media-error{font-size:12px;margin-top:8px;padding:8px;border:1px dashed var(--line);border-radius:6px}
-.post-actions{display:flex;gap:15px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
-.post-action-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px}
-.post-action-btn.liked{color:var(--danger)}
-.comments-box{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
-.comment-item{font-size:13px;padding:6px;background:#03080d;border-radius:6px;margin-top:5px;display:flex;justify-content:space-between;align-items:center;}
-
-.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #204254;border-radius:10px}
-.list{display:grid;gap:9px}
-.online-user{display:flex;align-items:center;gap:9px;padding:9px 10px;background:#08131c;border:1px solid #153040;border-radius:8px;cursor:pointer;width:100%;text-align:left;color:var(--text)}
-.online-user:hover{border-color:#28566c;background:#0a1822}
-.online-dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 9px #49f0a0;flex:0 0 auto}
-.online-avatar{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,#12384a,#282052);border:1px solid #28566c;color:var(--cyan);font-weight:900;font-size:11px;flex:0 0 auto}
-.online-meta{min-width:0;display:flex;flex-direction:column}
-.online-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.online-status{font-size:10px;color:var(--good)}
-.online-count{font-size:11px;color:var(--muted);margin-left:auto}
-.page-title{font-size:28px;margin:0 0 5px}
-.page-sub{color:var(--muted);margin:0 0 20px}
-.mobile-nav{display:none}
-
-.chat-container{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px;min-height:calc(100vh - 250px);height:calc(100vh - 250px)}
-.chat-users{border-right:1px solid var(--line);padding-right:14px;overflow-y:auto;max-height:none;min-height:0}
-.chat-box{display:flex;flex-direction:column;min-height:0;height:100%;position:relative}
-.chat-header{flex:0 0 auto;padding:10px 4px 12px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan);background:var(--panel);}
-.chat-composer{flex:0 0 auto;display:grid;gap:6px;background:var(--panel);padding:0 0 10px;border-bottom:1px solid var(--line);}
-.chat-compose-row{display:flex;gap:6px;align-items:flex-end}
-.chat-compose-row textarea{flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none}
-.chat-messages{flex:1 1 auto;min-height:0;overflow-y:auto;padding:18px 12px 24px;display:flex;flex-direction:column;gap:10px;background:#03080d;border:1px solid var(--line);border-radius:8px;margin-top:10px;scroll-behavior:smooth}
-
-\n.chat-composer-tools{display:flex;gap:6px;align-items:center}\n.chat-tool{width:42px;height:42px;display:grid;place-items:center;padding:0!important}\n.chat-recording{color:var(--danger)!important;border-color:var(--danger)!important;animation:chatPulse 1s infinite}\n.chat-reactions{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}\n.chat-reaction-btn{border:1px solid var(--line);background:#07131c;color:var(--text);border-radius:999px;padding:2px 6px;font-size:13px;cursor:pointer}\n.chat-reaction-list{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}\n.chat-reaction-chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;background:#07131c}\n@keyframes chatPulse{50%{opacity:.45}}
-
-.drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
-.drawer-backdrop.active{display:block}
-
-@media(max-width:850px){
-  .chat-container{grid-template-columns:1fr;min-height:calc(100vh - 210px);height:auto}
-  .chat-users{max-height:150px;min-height:0;border-right:none;border-bottom:1px solid var(--line);padding-bottom:10px}
-  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:20;background:#050b11f5;border-top:1px solid var(--line);padding:7px;gap:5px;overflow:auto}
-  .mobile-nav button{flex:1;min-width:72px}
-  .top{padding:10px 14px}
-  .page{padding:16px 14px 82px}
-  .grid{grid-template-columns:1fr}
-  .hero{padding:22px}
-}
-.post{contain:content;}
-.post-media img,.post-media video{content-visibility:auto;}
+.easy-login{max-width:470px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:18px 0}
+.auth-tab{border:1px solid var(--line);background:#071521;color:var(--muted);padding:11px;border-radius:9px}
+.auth-tab.active{color:var(--cyan);border-color:#1d687d;background:#0a2431}
+.setup-box{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:16px;background:#07121b}
+.setup-toggle{width:100%;display:flex;justify-content:space-between;border:0;background:transparent;color:var(--text);padding:4px;text-align:left}
+.setup-toggle:hover{color:var(--cyan)}
+.password-wrap{display:flex;gap:7px}
+.password-wrap input{flex:1}
+.show-btn{border:1px solid var(--line);background:#071521;color:var(--muted);border-radius:7px;padding:0 10px}
+.secondary{margin-top:10px;border:1px solid var(--line);background:#071521;color:var(--text);padding:9px 12px;border-radius:8px}
+.big-btn{width:100%;margin-top:8px;padding:12px}
+.link-btn{width:100%;border:0;background:transparent;color:var(--cyan);padding:11px;margin-top:4px}
+.login-info{margin-top:10px;color:var(--green);font-size:12px;line-height:1.5}
 </style>
 </head>
 <body>
-<section id="auth">
-  <div class="auth-box">
-    <div class="logo">PIXEL FRIENDS</div>
-    <div class="sub">A fresh cyber community — your space, your people.</div>
-    <div class="tabs"><button id="loginTab" class="active">LOGIN</button><button id="registerTab">REGISTER</button></div>
-    <form id="authForm">
-      <div class="field"><label>EMAIL</label><input id="email" type="email" required autocomplete="email"></div>
-      <div class="field"><label>PASSWORD</label><input id="password" type="password" required minlength="6" autocomplete="current-password"></div>
-      <div class="field hidden" id="nameField"><label>DISPLAY NAME</label><input id="displayName" maxlength="30"></div>
-      <button class="primary" id="authSubmit">ENTER PIXEL FRIENDS</button>
-    </form>
-    <div class="status" id="authStatus"></div>
-  </div>
-</section>
 
-<div id="app">
-<div class="drawer-backdrop" id="drawerBackdrop"></div>
-<div class="shell">
-<aside class="side" id="sideDrawer">
-  <div>
-    <div class="logo" id="sideLogo">PIXEL FRIENDS</div>
-    <nav class="nav" id="sideNav"></nav>
-  </div>
-  <div class="side-bottom">
-    <div class="profile-mini">
-      <span class="muted">SIGNED IN AS</span>
-      <b id="sideName">Guest</b>
+<div id="loginScreen" class="login">
+  <div class="login-box easy-login">
+    <div class="login-logo">◈ PHONE // COMMAND</div>
+    <h1>My Phone Monitor</h1>
+    <p class="lead">Simple parent dashboard</p>
+
+    <div class="auth-tabs">
+      <button id="signInTab" class="auth-tab active" type="button">Sign in</button>
+      <button id="createTab" class="auth-tab" type="button">Create account</button>
     </div>
-    <button class="secondary" id="logout" style="width:100%">LOG OUT</button>
-  </div>
-</aside>
 
-<main class="main">
-<header class="top">
-  <button class="menu-btn" id="menuBtn" aria-label="Toggle Menu">☰</button>
-  <div class="brand-mini" id="brandBtn" title="Click to Refresh">
-    <div class="brand-icon">◉</div>
-    <div>
-      <div class="brand-name">PIXEL FRIENDS</div>
-      <div class="brand-sub">CONNECT • CHAT • SHARE</div>
+    <div id="connectionSetup" class="setup-box">
+      <button id="setupToggle" class="setup-toggle" type="button">
+        <span>⚙ Connection setup</span><span id="setupArrow">＋</span>
+      </button>
+      <div id="setupFields" class="hidden">
+        <div class="field">
+          <label>Supabase Project URL</label>
+          <input id="url" type="url" placeholder="https://your-project.supabase.co" autocomplete="url">
+        </div>
+        <div class="field">
+          <label>Publishable / Anon key</label>
+          <div class="password-wrap">
+            <input id="key" type="password" placeholder="sb_publishable_..." autocomplete="off">
+            <button class="show-btn" type="button" data-show="key">Show</button>
+          </div>
+        </div>
+        <div class="small">This is only the public publishable/anon key. Never use a service-role or secret key.</div>
+        <button id="saveConnectionBtn" class="secondary" type="button">Save connection</button>
+      </div>
     </div>
-  </div>
-  <div class="spacer"></div>
-  <div class="header-actions">
-    <button class="bell-btn" id="topBell" aria-label="Notifications" title="View Notifications"><span style="font-size: 16px;">🔔</span><span class="notif-badge" id="notifBadge">0</span></button>
-    <button class="profile-btn" id="topProfile" aria-label="Profile" title="View Profile">
-      <span class="profile-avatar" id="topAvatar">PF</span>
-      <span>Profile</span>
-    </button>
-  </div>
-</header>
 
-<section class="page active" id="home">
-  <div class="hero">
-    <h1 id="welcome">Welcome, Pixel Friend.</h1>
-    <p>A clean, independent social space built for profiles, friends, posts, messages, and audio playlist.</p>
-  </div>
+    <div id="authFields">
+      <div class="field">
+        <label>Email</label>
+        <input id="email" type="email" autocomplete="username" placeholder="you@example.com">
+      </div>
 
-  <div class="grid">
-    <div>
-      <div class="card composer">
-        <h3>Share something</h3>
-        <textarea id="postText" placeholder="📋 Paste text, 🖼️ screenshots, or copied pictures directly here (Ctrl+V) and video and audio"></textarea>
-        
-        <input type="file" id="mediaInput" accept="image/*,video/*,audio/*" class="hidden">
-        <div id="mediaPreview" class="media-preview"></div>
-        <div id="uploadStatus" style="font-size:12px;color:var(--cyan);margin-top:6px;"></div>
-
-        <div class="row" style="margin-top:10px">
-          <button class="secondary" id="uploadImgBtn" style="font-size:12px">🖼️ Image</button>
-          <button class="secondary" id="uploadVidBtn" style="font-size:12px">🎥 Video</button>
-          <button class="secondary" id="uploadAudBtn" style="font-size:12px">🎵 Audio</button>
-          <div class="spacer"></div>
-          <button class="primary" style="width:auto" id="postBtn">POST</button>
+      <div class="field">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input id="password" type="password" autocomplete="current-password" placeholder="Your password">
+          <button class="show-btn" type="button" data-show="password">Show</button>
         </div>
       </div>
-      <div class="card" style="margin-top:18px"><h3>Community feed</h3><div class="feed" id="feed"><div class="empty">Loading community feed…</div></div></div>
+
+      <button id="loginBtn" class="primary big-btn" type="button">SIGN IN</button>
+      <button id="signupBtn" class="primary big-btn hidden" type="button">CREATE ACCOUNT</button>
+      <button id="forgotBtn" class="link-btn" type="button">Forgot password?</button>
     </div>
-    <div>
-      <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center">Online friends <span id="presenceStatus" class="muted" style="font-size:10px;font-weight:600">CONNECTING…</span></h3><div class="list" id="onlineFriendsList"><div class="empty">Connecting to online status…</div></div></div>
+
+    <div id="loginError" class="error"></div>
+    <div id="loginInfo" class="login-info"></div>
+
+    <div class="statusline">
+      Your connection details are saved in this browser so you do not need to type them every time.
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+<header class="top">
+  <button class="menu" id="menu">☰</button>
+  <div class="brand"><div class="logo">◉</div><div><div class="name">MY PHONE MONITOR</div><div class="sub">PRIVATE • PARENT SAFETY CONSOLE</div></div></div>
+  <div class="spacer"></div>
+  <div class="online"><span id="topDot" class="dot"></span><span id="topOnline">No device selected</span></div>
+  <button class="refresh" id="refresh" title="Refresh">↻</button>
+</header>
+
+<div class="layout">
+<aside id="side">
+<nav>
+<button class="active" data-page="dashboard">⌂ &nbsp; Dashboard</button>
+<button data-page="devices">▣ &nbsp; My Devices</button>
+<button data-page="battery">🔋 &nbsp; Battery</button>
+<button data-page="usage">📊 &nbsp; Usage</button>
+<button data-page="storage">💾 &nbsp; Storage</button>
+<button data-page="network">📶 &nbsp; Network</button>
+<button data-page="commands">⌘ &nbsp; Commands</button>
+<button data-page="settings">⚙ &nbsp; Settings</button>
+</nav>
+<div class="device"><span class="small">MONITORED DEVICE</span><br><b id="sideDevice">No device</b><div id="sideStatus" class="muted">Not connected</div></div>
+</aside>
+
+<main>
+<section class="page active" id="dashboard">
+  <div class="hero"><h1>My Phone</h1><p class="lead">Live parent safety dashboard connected to your Supabase data.</p></div>
+  <div class="grid">
+    <div class="card"><div class="label">BATTERY</div><div id="batteryValue" class="value good">—</div><div id="charging" class="small">—</div></div>
+    <div class="card"><div class="label">TEMPERATURE</div><div id="tempValue" class="value">—</div><div class="small">Battery temperature</div></div>
+    <div class="card"><div class="label">STORAGE FREE</div><div id="storageValue" class="value">—</div><div id="storageTotal" class="small">—</div></div>
+    <div class="card"><div class="label">SCREEN TIME</div><div id="screenValue" class="value">—</div><div id="screenDate" class="small">Today</div></div>
+  </div>
+  <div class="two">
+    <div class="card"><h3>🔋 Battery history</h3><div id="batteryBars" class="bars"><div class="muted">No history yet.</div></div></div>
+    <div class="card"><h3>📱 Device status</h3>
+      <div class="row"><span class="small">Device</span><b id="statusDevice">—</b></div>
+      <div class="row"><span class="small">Android</span><b id="statusAndroid">—</b></div>
+      <div class="row"><span class="small">Network</span><b id="statusNetwork">—</b></div>
+      <div class="row"><span class="small">Last sync</span><b id="statusSync">—</b></div>
+    </div>
+  </div>
+  <div class="two">
+    <div class="card"><h3>📊 Today's app usage</h3><div id="appUsage"><div class="muted">No usage data.</div></div></div>
+    <div class="card"><h3>💾 Storage</h3><div id="storageProgress" class="progress"><span style="width:0%"></span></div>
+      <div class="row"><span class="small">Used</span><b id="storageUsed">—</b></div>
+      <div class="row"><span class="small">Free</span><b id="storageFree">—</b></div>
     </div>
   </div>
 </section>
 
-<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" class="chat-header">Select a user to start chatting</div><form id="messageComposer" class="chat-composer"><div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div class="chat-compose-row"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Type a message or paste an image…"></textarea><div class="chat-composer-tools"><button type="button" class="secondary chat-tool" id="chatVoiceBtn" title="Record voice">🎙️</button><button type="button" class="secondary chat-tool" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px;height:42px" type="button" id="sendMessageBtn">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span></form><div class="chat-messages" id="chatMessagesList"><div class="empty">Select a user, then type a message or paste an image with Ctrl+V.</div></div></div></div></div></section>
-<section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
-<section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
-<section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Preferences.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div></div></section>
-</main></div>
-<nav class="mobile-nav" id="mobileNav"></nav>
+<section class="page" id="devices">
+  <h1>My Devices</h1><p class="lead">All Android devices registered to your Supabase account.</p>
+  <div class="card">
+    <div class="device-controls"><select id="deviceSelector" class="device-select"></select><span id="selectedPill" class="pill">No device selected</span></div>
+    <div class="device-table"><div class="device-head"><div>Device</div><div>Status</div><div>Battery</div><div>Last seen</div><div>Device ID</div></div><div id="deviceList"></div></div>
+  </div>
+</section>
+
+<section class="page" id="battery">
+  <h1>Battery</h1><p class="lead">Current battery status and recent measurements.</p>
+  <div class="grid"><div class="card"><div class="label">CURRENT</div><div id="bat2" class="value good">—</div><div id="chg2" class="small">—</div></div><div class="card"><div class="label">TEMPERATURE</div><div id="temp2" class="value">—</div></div><div class="card"><div class="label">CHARGING</div><div id="charge2" class="value">—</div></div><div class="card"><div class="label">UPDATED</div><div id="batUpdated" class="value" style="font-size:18px">—</div></div></div>
+  <div class="card" style="margin-top:14px"><h3>Recent battery history</h3><div id="batteryTable"></div></div>
+</section>
+
+<section class="page" id="usage">
+  <h1>Usage</h1><p class="lead">Screen time and app activity reported by the Android app.</p>
+  <div class="grid"><div class="card"><div class="label">SCREEN TIME</div><div id="useScreen" class="value">—</div></div><div class="card"><div class="label">UNLOCKS</div><div id="useUnlocks" class="value">—</div></div><div class="card"><div class="label">NOTIFICATIONS</div><div id="useNotifications" class="value">—</div></div><div class="card"><div class="label">DATE</div><div id="useDate" class="value" style="font-size:18px">—</div></div></div>
+  <div class="card" style="margin-top:14px"><h3>App usage today</h3><div id="usageTable"></div></div>
+</section>
+
+<section class="page" id="storage">
+  <h1>Storage</h1><p class="lead">Phone storage reported by the Android companion app.</p>
+  <div class="card"><h3 id="storageHeading">Storage</h3><div id="storageProgress2" class="progress"><span style="width:0%"></span></div><div class="row"><span class="small">Used</span><b id="storeUsed2">—</b></div><div class="row"><span class="small">Free</span><b id="storeFree2">—</b></div><div class="row"><span class="small">Total</span><b id="storeTotal2">—</b></div></div>
+</section>
+
+<section class="page" id="network">
+  <h1>Network</h1><p class="lead">Current connection reported by the Android device.</p>
+  <div class="grid"><div class="card"><div class="label">CONNECTION</div><div id="netType" class="value good">—</div></div><div class="card"><div class="label">STATUS</div><div id="netStatus" class="value good">—</div></div><div class="card"><div class="label">LAST SEEN</div><div id="netSeen" class="value" style="font-size:18px">—</div></div><div class="card"><div class="label">DEVICE</div><div id="netDevice" class="value" style="font-size:18px">—</div></div></div>
+</section>
+
+<section class="page" id="commands">
+  <h1>Remote Command Center</h1><p class="lead">Queue supported commands for the selected Android device.</p>
+  <div class="command-grid">
+    <div class="command-card"><h4>Refresh status</h4><p>Ask the phone to send its latest battery, storage and network status.</p><button class="command-btn" data-command="request_status">Request status</button></div>
+    <div class="command-card"><h4>Force sync</h4><p>Ask the phone to upload pending measurements immediately.</p><button class="command-btn" data-command="force_sync">Force sync</button></div>
+    <div class="command-card"><h4>Ring phone</h4><p>Request a visible/audible ring action on your own managed phone.</p><button class="command-btn" data-command="ring">Ring phone</button></div>
+    <div class="command-card"><h4>Lock screen</h4><p>Queue a screen-lock request supported by the Android management flow.</p><button class="command-btn" data-command="lock_screen">Lock screen</button></div>
+  </div>
+  <div class="note"><b>Security:</b> commands are written to <code>device_commands</code>. The Android app must implement the corresponding command handler. This page never uses a service-role key.</div>
+</section>
+
+<section class="page" id="settings">
+  <h1>Settings</h1><p class="lead">Connection and privacy information.</p>
+  <div class="card">
+    <div class="row"><span class="small">Signed-in account</span><b id="accountEmail">—</b></div>
+    <div class="row"><span class="small">Supabase connection</span><b class="good">Authenticated</b></div>
+    <div class="row"><span class="small">Private message contents</span><b>Not collected</b></div>
+    <div class="row"><span class="small">Passwords / clipboard</span><b>Not collected</b></div>
+    <div class="row"><span class="small">Microphone / camera</span><b>Not collected</b></div>
+    <div class="row"><span class="small">Media upload</span><b>OFF</b></div>
+    <button id="logoutBtn" class="command-btn danger" style="margin-top:14px">SIGN OUT</button>
+  </div>
+</section>
+</main>
+</div>
 </div>
 
+<div id="toast" class="toast"></div>
+
 <script>
-const SUPABASE_URL="https://koljxgkatllfexwoxnfi.supabase.co";
-const SUPABASE_KEY="sb_publishable_zIFLZLULAQfakOyzSZwRIQ_fq7DUS8T";
+let sb=null,user=null,devices=[],statuses={},activeDevice=null;
 
-let sb=null, user=null, posts=[];
-let currentMedia = null;
-let feedRequest = null;
-let feedTimer = null;
-let realtimeChannel = null;
-let presenceChannel = null;
-let notifications = [];
-const NOTIF_KEY = "pixel_friends_notifications_v1";
-const FEED_CACHE_KEY = "pixel_friends_feed_v1";
-const FEED_LIMIT = 20;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),3200)}
+function fmtTime(v){if(!v)return '—';const d=new Date(v);return isNaN(d)?'—':d.toLocaleString([], {dateStyle:'short',timeStyle:'short'})}
+function fmtDuration(sec){sec=Number(sec||0);const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h?`${h}h ${m}m`: `${m}m`}
+function fmtBytes(n){n=Number(n||0);const gb=n/1073741824;return gb>=1?`${gb.toFixed(gb>=10?0:1)} GB`:`${(n/1048576).toFixed(0)} MB`}
+function setText(id,v){if($(id))$(id).textContent=v}
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));$('side').classList.remove('open')}
+function selectedStatus(){return activeDevice?statuses[activeDevice.id]:null}
 
-const navItems=[
-  ["home","⌂","Home"],["messages","✉","Messages"],
-  ["notifications","◉","Notifications"],["profile","◎","Profile"],["settings","⚙","Settings"]
-];
+async function getClientFromForm(){
+  const url=$('url').value.trim().replace(/\/$/,'');
+  const key=$('key').value.trim();
+  if(!url||!key){
+    $('loginError').textContent='Open “Connection setup” and enter your Supabase URL and publishable/anon key.';
+    return null;
+  }
+  localStorage.setItem('mpm_url',url);
+  localStorage.setItem('mpm_key',key);
+  sb=window.supabase.createClient(url,key);
+  return sb;
+}
 
-function $(id){return document.getElementById(id)}
-function refreshApp(){ window.location.reload(); }
-
-$("brandBtn").onclick = refreshApp;
-if($("sideLogo")) $("sideLogo").onclick = () => window.location.reload();
-
-function initSupabase(){
+async function login(){
+  $('loginError').textContent=''; $('loginInfo').textContent='';
+  const client=await getClientFromForm(); if(!client)return;
+  const email=$('email').value.trim(), password=$('password').value;
+  if(!email||!password){$('loginError').textContent='Enter your email and password.';return}
+  $('loginBtn').disabled=true; $('loginBtn').textContent='SIGNING IN…';
   try{
-    if(window.supabase?.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  }catch(e){ sb=null; }
-}
-
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function buildNav(){
-  for(const host of [$("sideNav"),$("mobileNav")]){
-    if(!host) continue;
-    host.innerHTML=navItems.map(([id,icon,label])=>`<button data-page="${id}">${icon} &nbsp; ${label}</button>`).join("");
-    host.querySelectorAll("button").forEach(b=>b.onclick=()=>{
-      showPage(b.dataset.page);
-      closeMenu();
-    });
+    const {data,error}=await client.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    user=data.user;
+    $('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');
+    setText('accountEmail',user.email||'');
+    await loadAll(); subscribe();
+  }catch(e){
+    $('loginError').textContent=e?.message||'Sign in failed.';
+  }finally{
+    $('loginBtn').disabled=false;$('loginBtn').textContent='SIGN IN';
   }
 }
 
-function toggleMenu(){
-  $("sideDrawer")?.classList.toggle("open");
-  $("drawerBackdrop")?.classList.toggle("active");
-}
-
-function closeMenu(){
-  $("sideDrawer")?.classList.remove("open");
-  $("drawerBackdrop")?.classList.remove("active");
-}
-
-function showPage(id){
- document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));
- document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
- if(id==='messages'){
-   setupMessages();
-   ensureMessageComposer();
- }
-}
-
-function displayName(){
- return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Pixel Friend";
-}
-
-
-function renderOnlineFriends(){
-  const container=$('onlineFriendsList');
-  if(!container) return;
-  const state=presenceChannel?.presenceState?.() || {};
-  const people=[];
-  Object.entries(state).forEach(([key,entries])=>{
-    (entries||[]).forEach(entry=>{
-      if(!entry || entry.user_id===user?.id) return;
-      const id=entry.user_id || key;
-      if(people.some(p=>p.id===id)) return;
-      people.push({
-        id,
-        name:entry.display_name || entry.user_name || 'Pixel Friend'
-      });
-    });
-  });
-  people.sort((a,b)=>a.name.localeCompare(b.name));
-  const count=people.length;
-  if(!count){
-    container.innerHTML='<div class="empty" style="font-size:12px;padding:12px;">No other Pixel Friends are online right now.</div>';
-    return;
+async function signup(){
+  $('loginError').textContent=''; $('loginInfo').textContent='';
+  const client=await getClientFromForm(); if(!client)return;
+  const email=$('email').value.trim(), password=$('password').value;
+  if(!email||!password){$('loginError').textContent='Enter an email and password.';return}
+  if(password.length<6){$('loginError').textContent='Password must be at least 6 characters.';return}
+  $('signupBtn').disabled=true;$('signupBtn').textContent='CREATING…';
+  try{
+    const {data,error}=await client.auth.signUp({email,password});
+    if(error)throw error;
+    if(data.session){
+      user=data.user;
+      $('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');
+      setText('accountEmail',user.email||'');
+      await loadAll(); subscribe();
+    }else{
+      $('loginInfo').textContent='Account created. Check your email to confirm the account, then sign in.';
+    }
+  }catch(e){
+    $('loginError').textContent=e?.message||'Account creation failed.';
+  }finally{
+    $('signupBtn').disabled=false;$('signupBtn').textContent='CREATE ACCOUNT';
   }
-  container.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-      <span class="muted" style="font-size:11px">ONLINE NOW</span>
-      <span class="online-count">${count}</span>
-    </div>
-    ${people.slice(0,12).map(person=>{
-      const safeId=esc(person.id), safeName=esc(person.name);
-      const initials=esc(person.name.slice(0,2).toUpperCase());
-      return `<button class="online-user" data-online-user="${safeId}" data-online-name="${safeName}">
-        <span class="online-dot"></span>
-        <span class="online-avatar">${initials}</span>
-        <span class="online-meta"><span class="online-name">${safeName}</span><span class="online-status">Online</span></span>
-      </button>`;
-    }).join('')}
-    ${count>12?`<div class="muted" style="font-size:11px;text-align:center;padding-top:3px">+${count-12} more online</div>`:''}
-  `;
-  container.querySelectorAll('[data-online-user]').forEach(btn=>{
-    btn.onclick=()=>{
-      showPage('messages');
-      closeMenu();
-      openChat(btn.dataset.onlineUser,btn.dataset.onlineName);
-    };
-  });
 }
 
-async function startPresence(force=false){
-  if(!sb || !user) return;
-  const statusEl=$('presenceStatus');
-  const setPresenceStatus=(text,ok=false)=>{
-    if(!statusEl) return;
-    statusEl.textContent=text;
-    statusEl.style.color=ok?'var(--good)':'var(--muted)';
+async function forgotPassword(){
+  $('loginError').textContent=''; $('loginInfo').textContent='';
+  const client=await getClientFromForm(); if(!client)return;
+  const email=$('email').value.trim();
+  if(!email){$('loginError').textContent='Enter your email first.';return}
+  try{
+    const redirect=window.location.origin+window.location.pathname;
+    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:redirect});
+    if(error)throw error;
+    $('loginInfo').textContent='Password reset email sent. Check your inbox.';
+  }catch(e){$('loginError').textContent=e?.message||'Could not send reset email.'}
+}
+
+function showAuthMode(mode){
+  const signIn=mode==='signin';
+  $('signInTab').classList.toggle('active',signIn);
+  $('createTab').classList.toggle('active',!signIn);
+  $('loginBtn').classList.toggle('hidden',!signIn);
+  $('signupBtn').classList.toggle('hidden',signIn);
+  $('forgotBtn').classList.toggle('hidden',!signIn);
+  $('loginError').textContent='';$('loginInfo').textContent='';
+}
+
+
+async function loadAll(){
+  const {data,error}=await sb.from('devices').select('*').eq('user_id',user.id).order('created_at',{ascending:true});
+  if(error)throw error;devices=data||[];
+  const results=await Promise.all(devices.map(async d=>{
+    const {data:s}=await sb.from('device_status').select('*').eq('device_id',d.id).maybeSingle();return [d.id,s||null]
+  }));
+  statuses=Object.fromEntries(results);
+  renderDevices();
+  if(!activeDevice || !devices.some(d=>d.id===activeDevice.id))activeDevice=devices[0]||null;
+  renderAll();
+  await loadHistory();
+}
+
+function renderDevices(){
+  const sel=$('deviceSelector');sel.innerHTML=devices.length?devices.map(d=>`<option value="${esc(d.id)}">${esc(d.device_name||'Unnamed device')}</option>`).join(''):'<option>No devices registered</option>';
+  if(activeDevice)sel.value=activeDevice.id;
+  $('deviceList').innerHTML=devices.length?devices.map(d=>{
+    const s=statuses[d.id],online=!!s?.is_online;
+    return `<div class="device-row"><div><button onclick="chooseDevice('${d.id}')">${esc(d.device_name||'Unnamed')}</button><div class="muted">${esc(d.manufacturer||'')} ${esc(d.model||'')}</div></div><div class="${online?'online-text':'offline-text'}">${online?'● Online':'● Offline'}</div><div>${s?.battery_percent!=null?s.battery_percent+'%':'—'}</div><div>${fmtTime(d.last_seen||s?.updated_at)}</div><div class="muted">${esc(d.id)}</div></div>`
+  }).join(''):'<div class="device-row"><div>No registered devices.</div></div>';
+}
+
+function chooseDevice(id){activeDevice=devices.find(d=>d.id===id)||null;renderAll();loadHistory();showPage('dashboard')}
+function renderAll(){
+  const d=activeDevice,s=selectedStatus();
+  setText('sideDevice',d?.device_name||'No device');setText('sideStatus',s?.is_online?'● Online':'Not connected');
+  setText('topOnline',s?.is_online?'Phone online':'Phone offline');$('topDot').style.background=s?.is_online?'var(--green)':'#607887';
+  $('selectedPill').textContent=d?`${d.device_name} • ${s?.is_online?'Online':'Offline'}`:'No device selected';
+  if($('deviceSelector')&&d)$('deviceSelector').value=d.id;
+  const battery=s?.battery_percent!=null?`${s.battery_percent}%`:'—';
+  setText('batteryValue',battery);setText('charging',s?.charging?'Charging':'Not charging');setText('tempValue',s?.temperature!=null?`${s.temperature}°C`:'—');
+  setText('storageValue',fmtBytes(s?.storage_free));setText('storageTotal',s?.storage_used!=null&&s?.storage_free!=null?`${fmtBytes(s.storage_used+s.storage_free)} total`:'—');
+  setText('statusDevice',d?.device_name||'—');setText('statusAndroid',d?.android_version||'—');setText('statusNetwork',s?.network_type||'—');setText('statusSync',fmtTime(s?.updated_at));
+  setText('bat2',battery);setText('chg2',s?.charging?'Charging':'Not charging');setText('temp2',s?.temperature!=null?`${s.temperature}°C`:'—');setText('charge2',s?.charging?'YES':'NO');setText('batUpdated',fmtTime(s?.updated_at));
+  setText('netType',s?.network_type||'—');setText('netStatus',s?.is_online?'ONLINE':'OFFLINE');setText('netSeen',fmtTime(d?.last_seen||s?.updated_at));setText('netDevice',d?.device_name||'—');
+  const used=Number(s?.storage_used||0),free=Number(s?.storage_free||0),total=used+free,pct=total?Math.round(used/total*100):0;
+  ['storageProgress','storageProgress2'].forEach(id=>{const el=$(id);if(el)el.querySelector('span').style.width=pct+'%'});
+  setText('storageUsed',fmtBytes(used));setText('storageFree',fmtBytes(free));setText('storeUsed2',fmtBytes(used));setText('storeFree2',fmtBytes(free));setText('storeTotal2',fmtBytes(total));setText('storageHeading',total?`${fmtBytes(used)} / ${fmtBytes(total)} used`:'Storage');
+  loadUsage();
+}
+async function loadHistory(){
+  if(!activeDevice){$('batteryBars').innerHTML='<div class="muted">No device selected.</div>';return}
+  const {data,error}=await sb.from('battery_history').select('battery_percent,charging,temperature,recorded_at').eq('device_id',activeDevice.id).order('recorded_at',{ascending:false}).limit(12);
+  if(error){$('batteryBars').innerHTML='<div class="muted">Battery history unavailable.</div>';return}
+  const rows=(data||[]).reverse();
+  $('batteryBars').innerHTML=rows.length?rows.map(r=>`<div class="bar" style="height:${Math.max(8,Math.min(100,Number(r.battery_percent||0)))}%"><b>${esc(r.battery_percent)}%</b></div>`).join(''):'<div class="muted">No history yet.</div>';
+  $('batteryTable').innerHTML=rows.length?rows.slice().reverse().map(r=>`<div class="row"><span>${fmtTime(r.recorded_at)}</span><b>${esc(r.battery_percent)}% • ${r.charging?'Charging':'Not charging'} • ${r.temperature!=null?esc(r.temperature)+'°C':'—'}</b></div>`).join(''):'<div class="muted">No battery history.</div>';
+}
+async function loadUsage(){
+  if(!activeDevice)return;
+  const {data,error}=await sb.from('usage_daily').select('*').eq('device_id',activeDevice.id).eq('date',today()).maybeSingle();
+  if(!error&&data){
+    setText('screenValue',fmtDuration(data.screen_time_seconds));setText('useScreen',fmtDuration(data.screen_time_seconds));setText('useUnlocks',data.unlock_count??'—');setText('useNotifications',data.notification_count??'—');setText('useDate',data.date||today());
+  }else{
+    ['screenValue','useScreen','useUnlocks','useNotifications','useDate'].forEach(id=>setText(id,'—'));
+  }
+  const r=await sb.from('app_usage_daily').select('app_name,package_name,usage_seconds,launch_count').eq('device_id',activeDevice.id).eq('date',today()).order('usage_seconds',{ascending:false}).limit(12);
+  const rows=r.data||[];
+  $('appUsage').innerHTML=rows.length?rows.map(x=>`<div class="app"><b>${esc(x.app_name||x.package_name||'Unknown')}</b><span class="good">${fmtDuration(x.usage_seconds)}</span></div>`).join(''):'<div class="muted">No app usage data for today.</div>';
+  $('usageTable').innerHTML=rows.length?rows.map(x=>`<div class="row"><span>${esc(x.app_name||x.package_name||'Unknown')}</span><b>${fmtDuration(x.usage_seconds)} • ${x.launch_count??0} launches</b></div>`).join(''):'<div class="muted">No app usage data for today.</div>';
+}
+async function queueCommand(command){
+  if(!activeDevice){toast('Select a device first.');return}
+  const {error}=await sb.from('device_commands').insert({device_id:activeDevice.id,user_id:user.id,command,parameters:{},status:'queued'});
+  if(error)toast('Command failed: '+error.message);else toast(`Command queued: ${command}`);
+}
+function subscribe(){
+  sb.channel('mpm-dashboard').on('postgres_changes',{event:'*',schema:'public',table:'device_status',filter:`device_id=eq.${activeDevice?.id||'00000000-0000-0000-0000-000000000000'}`},()=>loadAll()).subscribe();
+}
+
+$('loginBtn').onclick=login;$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+$('menu').onclick=()=>$('side').classList.toggle('open');$('refresh').onclick=()=>loadAll();
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+$('deviceSelector').onchange=e=>chooseDevice(e.target.value);
+document.querySelectorAll('.command-btn[data-command]').forEach(b=>b.onclick=()=>queueCommand(b.dataset.command));
+$('logoutBtn').onclick=async()=>{await sb?.auth.signOut();location.reload()};
+
+
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const savedUrl=localStorage.getItem('mpm_url'), savedKey=localStorage.getItem('mpm_key');
+  if(savedUrl)$('url').value=savedUrl;
+  if(savedKey)$('key').value=savedKey;
+
+  const hasConnection=!!(savedUrl&&savedKey);
+  $('setupFields').classList.toggle('hidden',hasConnection);
+  $('setupArrow').textContent=hasConnection?'＋':'−';
+
+  $('setupToggle').onclick=()=>{
+    const hidden=$('setupFields').classList.toggle('hidden');
+    $('setupArrow').textContent=hidden?'＋':'−';
+  };
+  $('saveConnectionBtn').onclick=()=>{
+    const u=$('url').value.trim().replace(/\/$/,''), k=$('key').value.trim();
+    if(!u||!k){$('loginError').textContent='Please enter both the Supabase URL and publishable/anon key.';return}
+    localStorage.setItem('mpm_url',u);localStorage.setItem('mpm_key',k);
+    $('loginError').textContent='';
+    $('loginInfo').textContent='Connection saved. You can sign in now.';
+    $('setupFields').classList.add('hidden');$('setupArrow').textContent='＋';
   };
 
-  // Keep an existing healthy channel. Recreating Presence on every
-  // visibility event causes needless disconnect/reconnect delays.
-  if(presenceChannel && !force){
-    try{
-      await presenceChannel.track({
-        user_id:String(user.id),
-        display_name:displayName(),
-        online_at:new Date().toISOString()
-      });
-      setPresenceStatus('ONLINE',true);
-      renderOnlineFriends();
-      setupMessages();
-      return;
-    }catch(_){ /* recreate below */ }
-  }
-
-  if(presenceChannel){
-    try{ await sb.removeChannel(presenceChannel); }catch(e){}
-    presenceChannel=null;
-  }
-
-  presenceChannel=sb.channel('pixel-friends-presence-v3',{
-    config:{presence:{key:String(user.id)}}
+  document.querySelectorAll('[data-show]').forEach(btn=>{
+    btn.onclick=()=>{
+      const input=$(btn.dataset.show);
+      input.type=input.type==='password'?'text':'password';
+      btn.textContent=input.type==='password'?'Show':'Hide';
+    };
   });
 
-  presenceChannel
-    .on('presence',{event:'sync'},()=>{
-      setPresenceStatus('ONLINE',true);
-      renderOnlineFriends();
-      setupMessages();
-    })
-    .on('presence',{event:'join'},()=>{renderOnlineFriends();setupMessages();})
-    .on('presence',{event:'leave'},()=>{renderOnlineFriends();setupMessages();})
-    .subscribe(async status=>{
-      if(status==='SUBSCRIBED'){
-        try{
-          await presenceChannel.track({
-            user_id:String(user.id),
-            display_name:displayName(),
-            online_at:new Date().toISOString()
-          });
-          setPresenceStatus('ONLINE',true);
-          renderOnlineFriends();
-        }catch(e){
-          console.error('Presence track failed:',e);
-          setPresenceStatus('TRACK ERROR');
-        }
-      }else if(status==='CHANNEL_ERROR'){
-        setPresenceStatus('ERROR');
-        window.setTimeout(()=>{ if(user && !document.hidden) startPresence(true); },3000);
-      }else if(status==='TIMED_OUT'){
-        setPresenceStatus('TIMEOUT');
-        window.setTimeout(()=>{ if(user && !document.hidden) startPresence(true); },3000);
-      }else if(status==='CLOSED'){
-        setPresenceStatus('OFFLINE');
-      }
-    });
-
-  if(!window.__pfPresenceWakeBound){
-    window.__pfPresenceWakeBound=true;
-    document.addEventListener('visibilitychange',()=>{
-      if(document.visibilityState==='visible' && user) startPresence(false);
-    });
-    window.addEventListener('online',()=>{ if(user) startPresence(false); });
-  }
-}
-
-function openApp(){
- $("auth").classList.add("hidden");
- $("app").style.display="block";
- $("sideName").textContent=displayName();
- $("welcome").textContent=`Welcome, ${displayName()}.`;
- $("profileName").textContent=displayName();
- $("profileEmail").textContent=user?.email||"";
- $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();
- $("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
- 
- showPage("home");
- renderOnlineFriends();
- loadFeedCache();
- // Presence is independent from the feed: it updates the Online friends card instantly.
- startPresence();
- // Load server notifications only after the authenticated user is known.
- loadNotifications();
- requestAnimationFrame(() => { loadPosts(true); startFeedUpdates(); });
-}
-
-function setStatus(msg,bad=true){$("authStatus").textContent=msg;$("authStatus").style.color=bad?"var(--danger)":"var(--good)"}
-
-let register=false;
-$("loginTab").onclick=()=>{register=false;syncAuthMode()};
-$("registerTab").onclick=()=>{register=true;syncAuthMode()};
-
-function syncAuthMode(){
-  $("loginTab").classList.toggle("active",!register);
-  $("registerTab").classList.toggle("active",register);
-  $("nameField").classList.toggle("hidden",!register);
-  $("authSubmit").textContent=register?"CREATE PIXEL FRIENDS ACCOUNT":"ENTER PIXEL FRIENDS";
-  $("authStatus").textContent="";
-}
-
-$("authForm").onsubmit=async e=>{
- e.preventDefault();
- setStatus("Authenticating instantly…",false);
- const email=$("email").value.trim(), password=$("password").value, display=$("displayName").value.trim();
- if(!sb){setStatus("Cloud authentication is unavailable.");return}
- 
- try{
-  if(register){
-   const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:display||email.split("@")[0]}}});
-   if(error)throw error;
-   if(data.session){user=data.user;openApp();}else setStatus("Account created. Check your email to confirm.",false);
-  }else{
-   const {data,error}=await sb.auth.signInWithPassword({email,password});
-   if(error)throw error;
-   user=data.user;
-   openApp();
-  }
- }catch(err){setStatus(err?.message||"Authentication failed.")}
-};
-
-$("logout").onclick=async()=>{
-  try{
-    if(presenceChannel && sb){ await sb.removeChannel(presenceChannel); }
-  }catch(e){}
-  presenceChannel=null;
-  if(sb)try{await sb.auth.signOut()}catch(e){}
-  user=null;
-  posts=[];
-  closeMenu();
-  $("app").style.display="none";
-  $("auth").classList.remove("hidden");
-};
-
-$("topBell").onclick = () => { showPage("notifications"); markNotificationsRead(); closeMenu(); };
-$("topProfile").onclick = () => { showPage("profile"); closeMenu(); };
-$("menuBtn").onclick=toggleMenu;
-$("drawerBackdrop").onclick=closeMenu;
-
-async function prepareMedia(file) {
-  if (!file) return null;
-  let type = 'image';
-  if (file.type.startsWith('video/')) type = 'video';
-  else if (file.type.startsWith('audio/')) type = 'audio';
-  if (type === 'image' && !/image\/gif|image\/svg\+xml/i.test(file.type) && file.size > 350 * 1024) {
-    try {
-      const bitmap = await createImageBitmap(file);
-      const maxSide = 1600;
-      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      const ctx = canvas.getContext('2d', {alpha:false});
-      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      bitmap.close?.();
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
-      if (blob && blob.size < file.size) file = new File([blob], 'image.webp', {type:'image/webp'});
-    } catch (e) { console.warn('Image compression skipped:', e); }
-  }
-  return {file, type};
-}
-
-async function setMediaFile(file) {
-  if (!file || !sb) return;
-  const prepared = await prepareMedia(file);
-  if (!prepared) return;
-  const {file: uploadFile, type} = prepared;
-  $('uploadStatus').textContent = 'Uploading media…';
-  const ext = uploadFile.name.split('.').pop() || 'bin';
-  const safeName = `media_${crypto.randomUUID?.() || (Date.now()+'_'+Math.random().toString(36).slice(2,8))}.${ext}`;
-  const { error } = await sb.storage.from('post-media').upload(safeName, uploadFile, {contentType: uploadFile.type || undefined, cacheControl:'31536000', upsert:false});
-  if (error) { $('uploadStatus').textContent = 'Upload failed: ' + error.message; return; }
-  const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(safeName);
-  currentMedia = {type, src: publicUrlData.publicUrl, path: safeName};
-  $('uploadStatus').textContent = 'Ready!';
-  renderMediaPreview();
-}
-function normalizeMedia(media){
-  if(!media) return null;
-  if(typeof media === 'string'){
-    try{ media=JSON.parse(media); }catch(e){ return {type:'audio',src:media}; }
-  }
-  if(typeof media !== 'object') return null;
-  const type = media.type || media.mime_type?.split('/')[0] || 'audio';
-  return {...media, type, src:media.src || media.url || media.publicUrl || ''};
-}
-
-function mediaPathFromUrl(src){
-  try{
-    const marker='/storage/v1/object/public/post-media/';
-    const signedMarker='/storage/v1/object/sign/post-media/';
-    if(src.includes(marker)) return decodeURIComponent(src.split(marker)[1].split('?')[0]);
-    if(src.includes(signedMarker)) return decodeURIComponent(src.split(signedMarker)[1].split('?')[0]);
-  }catch(e){}
-  return null;
-}
-
-async function getSignedMediaUrl(media){
-  const m=normalizeMedia(media);
-  const path=m?.path || mediaPathFromUrl(m?.src||'');
-  if(!sb || !path) return null;
-  try{
-    const {data,error}=await sb.storage.from('post-media').createSignedUrl(path,3600);
-    return error ? null : data?.signedUrl || null;
-  }catch(e){ return null; }
-}
-
-async function recoverMediaElement(el){
-  if(!el || el.dataset.recovered==='1') return;
-  el.dataset.recovered='1';
-  const media=normalizeMedia({src:el.currentSrc || el.src,type:el.dataset.mediaType,path:el.dataset.mediaPath});
-  const signed=await getSignedMediaUrl(media);
-  if(signed && signed!==el.src){
-    el.dataset.recovered='2';
-    el.src=signed;
-    try{ el.load(); }catch(e){}
-  }else{
-    const holder=el.closest('.post-media');
-    if(holder && !holder.querySelector('.media-error')){
-      const msg=document.createElement('div');
-      msg.className='media-error muted';
-      msg.textContent='Media could not be loaded. Check the post-media storage bucket permissions.';
-      holder.appendChild(msg);
-    }
-  }
-}
-
-function attachMediaRecovery(){
-  document.querySelectorAll('#feed audio[data-media], #feed video[data-media]').forEach(el=>{
-    el.addEventListener('error',()=>recoverMediaElement(el),{once:true});
-  });
-}
-
-function renderMediaPreview() {
-  const container = $("mediaPreview");
-  if (!currentMedia) { container.innerHTML = ""; return; }
-  let mediaHtml = "";
-  if (currentMedia.type === 'image') mediaHtml = `<img src="${currentMedia.src}" loading="lazy" decoding="async">`;
-  else if (currentMedia.type === 'video') mediaHtml = `<video src="${currentMedia.src}" controls preload="metadata" playsinline></video>`;
-  else if (currentMedia.type === 'audio') mediaHtml = `<audio src="${currentMedia.src}" controls preload="metadata"></audio>`;
-  container.innerHTML = `<div class="preview-item">${mediaHtml}<button class="remove-btn" onclick="currentMedia=null;renderMediaPreview()">✕</button></div>`;
-}
-
-$("postText").addEventListener("paste", (e) => {
-  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-  for (let item of items) { if (item.kind === 'file') setMediaFile(item.getAsFile()); }
+  $('signInTab').onclick=()=>showAuthMode('signin');
+  $('createTab').onclick=()=>showAuthMode('signup');
+  $('loginBtn').onclick=login;
+  $('signupBtn').onclick=signup;
+  $('forgotBtn').onclick=forgotPassword;
 });
 
-$("uploadImgBtn").onclick = () => { $("mediaInput").accept = "image/*"; $("mediaInput").click(); };
-$("uploadVidBtn").onclick = () => { $("mediaInput").accept = "video/*"; $("mediaInput").click(); };
-$("uploadAudBtn").onclick = () => { $("mediaInput").accept = "audio/*"; $("mediaInput").click(); };
-$("mediaInput").onchange = (e) => { if (e.target.files && e.target.files[0]) setMediaFile(e.target.files[0]); };
-
-$("postBtn").onclick = async () => {
-  const text = $("postText").value.trim();
-  if (!text && !currentMedia) return;
-  if (!sb || !user) return;
-  const btn = $("postBtn");
-  btn.disabled = true;
-  btn.textContent = "POSTING…";
-
-  const now = new Date().toISOString();
-  const tempId = "temp-" + Date.now();
-  const optimisticPost = {
-    id: tempId, user_id: user.id, user_name: displayName(), text: text || null,
-    media: currentMedia ? {...currentMedia} : null, created_at: now,
-    likes_users: [], likes_count: 0, comments: [], _pending: true
-  };
-  posts = [optimisticPost, ...posts].slice(0, FEED_LIMIT);
-  const feed=$('feed');
-  const empty=feed.querySelector('.empty'); if(empty) empty.remove();
-  feed.insertAdjacentHTML('afterbegin',renderSinglePost(optimisticPost));
-  attachMediaRecovery();
-  $("postText").value = "";
-  currentMedia = null;
-  $("uploadStatus").textContent = "";
-  renderMediaPreview();
-
-  try {
-    const {data, error} = await sb.from('posts').insert([{
-      user_id:user.id, user_name:displayName(), text:text||null, media:optimisticPost.media
-    }]).select('id,user_id,user_name,text,media,created_at').single();
-    if (error) throw error;
-    const saved = {...data, likes_users:[], likes_count:0, comments:[]};
-    const pos = posts.findIndex(p => p.id === tempId);
-    posts = posts.map(p => p.id === tempId ? saved : p);
-    const tempEl=postElement(tempId);
-    if(tempEl) tempEl.outerHTML=renderSinglePost(saved); else renderFeed();
-    attachMediaRecovery();
-    saveFeedCache();
-    window.setTimeout(()=>loadPosts(true),1200);
-  } catch (err) {
-    posts = posts.filter(p => p.id !== tempId);
-    renderFeed();
-    alert("Failed to post: " + (err?.message || "Unknown error"));
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "POST";
-  }
-};
-
-function saveFeedCache(){
-  try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(posts.slice(0,FEED_LIMIT))); } catch(e) {}
-}
-function loadFeedCache(){
-  try {
-    const cached=JSON.parse(localStorage.getItem(FEED_CACHE_KEY)||"[]");
-    if(Array.isArray(cached)&&cached.length){ posts=cached; renderFeed(); return true; }
-  } catch(e) {}
-  return false;
-}
-function scheduleFeedRefresh(delay=700){
-  clearTimeout(feedTimer);
-  feedTimer=setTimeout(()=>loadPosts(true),delay);
-}
-
-async function loadPosts(background=false){
-  if(!sb || !user) return;
-  if(feedRequest) return feedRequest;
-  const feed=$('feed');
-  if(!background && !posts.length) feed.innerHTML='<div class="empty">Loading community feed…</div>';
-  feedRequest=(async()=>{
-    try{
-      const {data:rows,error}=await sb.from('posts')
-        .select('id,user_id,user_name,text,media,created_at')
-        .order('created_at',{ascending:false}).limit(FEED_LIMIT);
-      if(error) throw error;
-      const list=rows||[];
-      if(!list.length){
-        const pending=posts.filter(p=>p._pending);
-        posts=pending; renderFeed(); setupMessages(); saveFeedCache(); return;
-      }
-      const ids=list.map(p=>p.id);
-      const [likesRes,commentsRes]=await Promise.all([
-        sb.from('likes').select('post_id,user_id').in('post_id',ids),
-        sb.from('comments').select('id,post_id,user_id,user_name,content,created_at').in('post_id',ids).order('created_at',{ascending:true}).limit(150)
-      ]);
-      if(likesRes.error) throw likesRes.error;
-      if(commentsRes.error) throw commentsRes.error;
-      const likes=new Map(), comments=new Map();
-      (likesRes.data||[]).forEach(x=>{if(!likes.has(x.post_id))likes.set(x.post_id,[]);likes.get(x.post_id).push(x.user_id)});
-      (commentsRes.data||[]).forEach(x=>{if(!comments.has(x.post_id))comments.set(x.post_id,[]);comments.get(x.post_id).push(x)});
-      const fresh=list.map(p=>({...p,media:normalizeMedia(p.media),likes_users:likes.get(p.id)||[],likes_count:(likes.get(p.id)||[]).length,comments:comments.get(p.id)||[]}));
-      // Preserve any local optimistic operations that are still waiting for Supabase.
-      const pending=posts.filter(p=>p._pending && !fresh.some(x=>x.id===p.id));
-      posts=[...pending,...fresh].slice(0,FEED_LIMIT);
-      renderFeed(); setupMessages(); saveFeedCache();
-    }catch(err){
-      console.error('Feed refresh failed:',err);
-      if(!posts.length) feed.innerHTML='<div class="empty">Could not load the community feed. Please try again.</div>';
-    }finally{feedRequest=null;}
-  })();
-  return feedRequest;
-}
-
-function upsertRealtimePost(row){
-  if(!row?.id) return;
-  const existing=posts.find(p=>p.id===row.id);
-  if(existing){
-    Object.assign(existing,row,{media:normalizeMedia(row.media)});
-  }else{
-    posts=[{...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]},...posts.filter(p=>!p._pending)].slice(0,FEED_LIMIT);
-  }
-  saveFeedCache(); renderFeed();
-}
-
-function applyRealtimeLike(payload){
-  const row=payload?.new || payload?.old;
-  const post=posts.find(p=>p.id===row?.post_id);
-  if(!post || !row) return;
-  const uid=row.user_id;
-  const users=new Set(post.likes_users||[]);
-  if(payload.eventType==='INSERT') users.add(uid); else users.delete(uid);
-  post.likes_users=[...users];
-  post.likes_count=post.likes_users.length;
-  updatePostDom(post);
-  saveFeedCache();
-}
-
-function applyRealtimeComment(payload){
-  const row=payload?.new || payload?.old;
-  const post=posts.find(p=>p.id===row?.post_id);
-  if(!post || !row) return;
-  post.comments=post.comments||[];
-  if(payload.eventType==='INSERT'){
-    if(!post.comments.some(c=>c.id===row.id)){
-      const idx=post.comments.findIndex(c=>c._pending && c.user_id===row.user_id && c.content===row.content);
-      if(idx>=0) post.comments[idx]=row; else post.comments.push(row);
-    }
-  }else if(payload.eventType==='UPDATE'){
-    const idx=post.comments.findIndex(c=>c.id===row.id); if(idx>=0) post.comments[idx]=row;
-  }else if(payload.eventType==='DELETE'){
-    post.comments=post.comments.filter(c=>c.id!==row.id);
-  }
-  post.comments.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-  updatePostDom(post);
-  saveFeedCache();
-}
-
-async function loadNotifications(){
-  if(!user || !sb){ renderNotifications(); return; }
-  try{
-    const {data,error}=await sb.from('notifications')
-      .select('id,user_id,type,title,message,is_read,read,created_at,target_id')
-      .eq('user_id',user.id)
-      .order('created_at',{ascending:false})
-      .limit(50);
-    if(error) throw error;
-    notifications=(data||[]).map(n=>({
-      id:n.id,
-      type:n.type,
-      title:n.title,
-      text:n.message || n.title || 'New activity',
-      created_at:n.created_at,
-      read:Boolean(n.is_read ?? n.read),
-      target_id:n.target_id
-    }));
-    saveNotifications();
-  }catch(e){
-    // Keep cached notifications available if the network is temporarily unavailable.
-    try{ notifications=JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]'); }catch(_){ notifications=[]; }
-  }
-  renderNotifications();
-}
-function saveNotifications(){
-  try{ localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications.slice(0,50))); }catch(e){}
-}
-function notificationFromRow(row){
-  if(!row) return null;
-  return {
-    id:row.id,
-    type:row.type||'activity',
-    title:row.title||'New activity',
-    text:row.message||row.title||'New activity',
-    created_at:row.created_at||new Date().toISOString(),
-    read:Boolean(row.is_read ?? row.read),
-    target_id:row.target_id||null
-  };
-}
-function mergeServerNotification(row){
-  if(!row || !user || row.user_id!==user.id) return;
-  const n=notificationFromRow(row); if(!n)return;
-  const idx=notifications.findIndex(x=>String(x.id)===String(n.id));
-  if(idx>=0) notifications[idx]=n; else notifications.unshift(n);
-  notifications=notifications.slice(0,50);
-  saveNotifications();
-  renderNotifications();
-  if(!n.read && $('topBell')){
-    $('topBell').animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:350});
-  }
-}
-function renderNotifications(){
-  const unread=notifications.filter(n=>!n.read).length;
-  const badge=$('notifBadge');
-  if(badge){badge.textContent=unread>99?'99+':String(unread);badge.style.display=unread?'flex':'none';}
-  const list=$('notificationList'); if(!list)return;
-  if(!notifications.length){list.innerHTML='<div class="empty">You’re all caught up.</div>';return;}
-  list.innerHTML=notifications.map(n=>`<div class="comment-item" data-notification-id="${esc(n.id)}" style="padding:12px;border:1px solid var(--line);background:${n.read?'#07111a':'#0a1d28'}"><div><b>${esc(n.title||n.text)}</b><div style="margin-top:3px">${esc(n.text||'')}</div><div class="muted" style="margin-top:3px;font-size:11px">${esc(new Date(n.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div></div>`).join('');
-}
-async function markNotificationsRead(){
-  const unreadIds=notifications.filter(n=>!n.read).map(n=>n.id).filter(Boolean);
-  notifications=notifications.map(n=>({...n,read:true}));
-  saveNotifications(); renderNotifications();
-  if(!sb || !user || !unreadIds.length)return;
-  try{
-    await sb.from('notifications').update({is_read:true,read:true}).eq('user_id',user.id).in('id',unreadIds);
-  }catch(e){ console.warn('Could not mark notifications read:',e); }
-}
-
-function subscribeToFeed(){
-  if(!sb || !user || realtimeChannel)return;
-  try{
-    realtimeChannel=sb.channel('pixel-friends-live-v5')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>{
-        const row=payload.new; if(!row?.id || posts.some(x=>x.id===row.id))return;
-        const pendingIndex=posts.findIndex(x=>x._pending && x.user_id===row.user_id && (x.text||null)===(row.text||null));
-        const fresh={...row,media:normalizeMedia(row.media),likes_users:[],likes_count:0,comments:[]};
-        const feed=$('feed');
-        const empty=feed.querySelector('.empty'); if(empty)empty.remove();
-        if(pendingIndex>=0){
-          const oldId=posts[pendingIndex].id;
-          posts[pendingIndex]=fresh;
-          const oldEl=postElement(oldId);
-          if(oldEl) oldEl.outerHTML=renderSinglePost(fresh);
-          else feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
-        }else{
-          posts=[fresh,...posts.filter(x=>!x._pending)].slice(0,FEED_LIMIT);
-          feed.insertAdjacentHTML('afterbegin',renderSinglePost(fresh));
-        }
-        attachMediaRecovery(); saveFeedCache();
-      })
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>{
-        const post=postById(payload.new?.id); if(!post)return;
-        Object.assign(post,payload.new,{media:normalizeMedia(payload.new.media)});
-        const el=postElement(post.id); if(el)el.outerHTML=renderSinglePost(post);
-        attachMediaRecovery(); saveFeedCache();
-      })
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'posts'},payload=>{
-        const id=payload.old?.id; posts=posts.filter(x=>x.id!==id); postElement(id)?.remove(); saveFeedCache();
-      })
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},applyRealtimeLike)
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'likes'},applyRealtimeLike)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'comments'},applyRealtimeComment)
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comments'},applyRealtimeComment)
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'comments'},applyRealtimeComment)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'notifications',filter:`user_id=eq.${user.id}`},payload=>mergeServerNotification(payload.new))
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`sender_id=eq.${user.id}`},payload=>handleIncomingMessage(payload.new))
-      .subscribe(status=>{
-        window.__pfRealtimeReady=status==='SUBSCRIBED';
-        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') console.warn('Realtime unavailable; fallback polling active.');
-      });
-  }catch(e){console.warn('Realtime setup failed:',e);}
-}
-function startFeedUpdates(){
-  subscribeToFeed();
-  clearInterval(window.__pfFeedPoll);
-  window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},8000);
-}
-
-function commentHtml(c){
-  const name=esc(c?.user_name||'Pixel Friend');
-  const text=esc(c?.content||'');
-  const id=c?.id?esc(c.id):'';
-  return `<div class="comment-item" data-comment-id="${id}"><div><b>${name}:</b> ${text}</div></div>`;
-}
-
-function postById(id){
-  return posts.find(p=>String(p.id)===String(id)) || null;
-}
-function postElement(id){
-  if(!id) return null;
-  return document.querySelector(`[data-post-id="${CSS.escape(String(id))}"]`);
-}
-
-async function handleLike(postId){
-  const post=postById(postId);
-  if(!post || !user || !sb || post._likeBusy) return;
-  post._likeBusy=true;
-  const wasLiked=(post.likes_users||[]).includes(user.id);
-  const users=new Set(post.likes_users||[]);
-  if(wasLiked) users.delete(user.id); else users.add(user.id);
-  post.likes_users=[...users];
-  post.likes_count=post.likes_users.length;
-  updatePostDom(post);
-
-  try{
-    if(wasLiked){
-      const {error}=await sb.from('likes').delete().eq('post_id',postId).eq('user_id',user.id);
-      if(error) throw error;
-    }else{
-      const {error}=await sb.from('likes').insert([{post_id:postId,user_id:user.id}]);
-      if(error) throw error;
-    }
-    saveFeedCache();
-  }catch(err){
-    const rollback=new Set(post.likes_users||[]);
-    if(wasLiked) rollback.add(user.id); else rollback.delete(user.id);
-    post.likes_users=[...rollback];
-    post.likes_count=post.likes_users.length;
-    updatePostDom(post);
-    console.warn('Like failed:',err);
-  }finally{
-    post._likeBusy=false;
-  }
-}
-
-async function handleAddComment(postId,event){
-  event?.preventDefault();
-  const post=postById(postId);
-  if(!post || !user || !sb || post._commentBusy) return;
-  const input=$(`comment-input-${postId}`);
-  const text=input?.value.trim()||'';
-  if(!text) return;
-  post._commentBusy=true;
-  const tempId=`temp-comment-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-  const optimistic={id:tempId,post_id:postId,user_id:user.id,user_name:displayName(),content:text,created_at:new Date().toISOString(),_pending:true};
-  post.comments=post.comments||[];
-  post.comments.push(optimistic);
-  if(input) input.value='';
-  updatePostDom(post);
-
-  try{
-    const {data,error}=await sb.from('comments').insert([{
-      post_id:postId,user_id:user.id,user_name:displayName(),content:text
-    }]).select('id,post_id,user_id,user_name,content,created_at').single();
-    if(error) throw error;
-    const i=post.comments.findIndex(c=>c.id===tempId);
-    if(i>=0) post.comments[i]={...data};
-    else if(!post.comments.some(c=>c.id===data.id)) post.comments.push(data);
-    updatePostDom(post);
-    saveFeedCache();
-  }catch(err){
-    post.comments=post.comments.filter(c=>c.id!==tempId);
-    updatePostDom(post);
-    if(input) input.value=text;
-    console.warn('Comment failed:',err);
-  }finally{
-    post._commentBusy=false;
-  }
-}
-
-function updatePostDom(post){
-  const el=postElement(post?.id); if(!el) return;
-  const likeBtn=el.querySelector('[data-action="like"]');
-  if(likeBtn){
-    const liked=(post.likes_users||[]).includes(user?.id);
-    likeBtn.classList.toggle('liked',liked);
-    const count=likeBtn.querySelector('[data-like-count]');
-    if(count) count.textContent=String(post.likes_count||0);
-  }
-  const commentsBox=el.querySelector('[data-comments]');
-  const count=el.querySelector('[data-comment-count]');
-  if(commentsBox) commentsBox.innerHTML=(post.comments||[]).map(commentHtml).join('');
-  if(count) count.textContent=String((post.comments||[]).length);
-}
-
-function renderFeed(){
- const f=$('feed');if(!posts.length){f.innerHTML='<div class="empty">No posts yet. Be the first Pixel Friend to publish something.</div>';return}
- f.innerHTML=posts.map(p=>{
-  const name=p.user_name||'Pixel Friend';const postDate=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now';const media=normalizeMedia(p.media);let mediaHtml='';
-  if(media?.src){const path=media.path?esc(media.path):'';if(media.type==='image')mediaHtml=`<div class="post-media"><img src="${esc(media.src)}" loading="lazy" decoding="async"></div>`;else if(media.type==='video')mediaHtml=`<div class="post-media"><video src="${esc(media.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(media.type==='audio')mediaHtml=`<div class="post-media"><audio src="${esc(media.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}
-  const liked=(p.likes_users||[]).includes(user?.id);
-  return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(postDate)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${mediaHtml}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`
- }).join('');attachMediaRecovery();
-}
-
-function setupMessages(){
- const list=$('chatUsersList');if(!list||!sb||!user)return;
- const people=new Map();
- // Users who are currently online are always available to start a chat.
- const state=presenceChannel?.presenceState?.() || {};
- Object.entries(state).forEach(([key,entries])=>{
-   (entries||[]).forEach(entry=>{
-     const id=String(entry?.user_id||key);
-     if(id && id!==String(user.id) && !people.has(id)) people.set(id,entry.display_name||entry.user_name||'Pixel Friend');
-   });
- });
- // Also include users we know from the feed, so Messages can be started even if they are offline.
- (posts||[]).forEach(p=>{
-   if(p.user_id && p.user_id!==user.id && !people.has(String(p.user_id))) people.set(String(p.user_id),p.user_name||'Pixel Friend');
- });
- const arr=[...people.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
- list.innerHTML=arr.length?arr.slice(0,50).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between"><span>💬 ${esc(name)}</span><span class="muted" style="font-size:10px">Chat</span></button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet. Ask a friend to log in or publish a post.</div>';
- list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
-}
-let activeChat=null;
-let chatRecorder=null;
-let chatRecordChunks=[];
-let chatRecordingStream=null;
-function parseMessageContent(content){
-  if(!content) return {kind:'text',text:''};
-  try{
-    const x=JSON.parse(content);
-    if(x && (x.kind==='text' || x.kind==='media' || x.kind==='mixed')) return x;
-  }catch(e){}
-  return {kind:'text',text:String(content)};
-}
-function messageBubble(m, reactionMap){
-  const mine=String(m.sender_id)===String(user?.id);
-  const c=parseMessageContent(m.content);
-  if(c.kind==='reaction') return '';
-  let body='';
-  if(c.text) body+=`<div style="white-space:pre-wrap;word-break:break-word">${esc(c.text)}</div>`;
-  if(c.media?.src){
-    const src=esc(c.media.src), type=esc(c.media.type||'');
-    if(type==='image') body+=`<div style="margin-top:${c.text?'8px':'0'}"><img src="${src}" loading="lazy" style="max-width:min(360px,100%);max-height:320px;object-fit:contain;border-radius:8px;border:1px solid var(--line);display:block"></div>`;
-    else if(type==='video') body+=`<div style="margin-top:${c.text?'8px':'0'}"><video src="${src}" controls preload="metadata" playsinline style="max-width:min(420px,100%);max-height:320px;border-radius:8px;display:block"></video></div>`;
-    else if(type==='audio') body+=`<div style="margin-top:${c.text?'8px':'0'}"><audio src="${src}" controls preload="metadata" style="width:min(420px,100%);display:block"></audio></div>`;
-    else body+=`<a href="${src}" target="_blank" rel="noopener" style="color:var(--cyan)">📎 Open attachment</a>`;
-  }
-  const reactions=(reactionMap&&reactionMap[m.id])||[];
-  const reactionHtml=reactions.length?`<div class="chat-reaction-list">${reactions.map(r=>`<span class="chat-reaction-chip">${esc(r.emoji)} ${esc(r.name||'')}</span>`).join('')}</div>`:'';
-  const quick=['❤️','👍','😂','😮','😢','🔥'];
-  const quickHtml=`<div class="chat-reactions">${quick.map(e=>`<button type="button" class="chat-reaction-btn" onclick="reactToMessage('${esc(m.id)}','${e}')">${e}</button>`).join('')}</div>`;
-  return `<div data-message-id="${esc(m.id)}" style="align-self:${mine?'flex-end':'flex-start'};max-width:82%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:${mine?'#0a1d28':'#08131c'}"><div>${body||'<span class="muted">Attachment</span>'}</div>${reactionHtml}${quickHtml}<div class="muted" style="font-size:10px;margin-top:4px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`;
-}
-async function loadActiveChatMessages(){
-  if(!activeChat||!sb||!user)return;
-  const box=$('chatMessagesList'); if(!box)return;
-  const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);
-  if(error) throw error;
-  const rows=data||[];
-  const reactionMap={};
-  rows.forEach(m=>{
-    const c=parseMessageContent(m.content);
-    if(c.kind==='reaction' && c.target_id){
-      (reactionMap[c.target_id] ||= []).push({emoji:c.emoji||'❤️',name:c.name||((String(m.sender_id)===String(user.id))?'You':'')});
-    }
-  });
-  const normal=rows.filter(m=>parseMessageContent(m.content).kind!=='reaction');
-  box.innerHTML=normal.map(m=>messageBubble(m,reactionMap)).join('')||'<div class="empty">No messages yet. Send a message below.</div>';
-  box.scrollTop=box.scrollHeight;
-}
-async function reactToMessage(messageId, emoji){
-  if(!activeChat||!sb||!user)return;
-  try{
-    const payload={kind:'reaction',target_id:String(messageId),emoji:String(emoji),name:displayName()};
-    const {error}=await sb.from('messages').insert({sender_id:user.id,recipient_id:activeChat.id,content:JSON.stringify(payload)});
-    if(error)throw error;
-    await loadActiveChatMessages();
-  }catch(err){
-    const status=$('messageSendStatus');
-    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Reaction failed: '+(err?.message||'Unable to react');}
-  }
-}
-
-async function uploadChatFile(file){
-  if(!file || !sb) return null;
-  const ext=(file.name||'attachment').split('.').pop() || (file.type.split('/')[1]||'bin');
-  const safeName=`chat_${crypto.randomUUID?.() || (Date.now()+'_'+Math.random().toString(36).slice(2,8))}.${ext}`;
-  const {error}=await sb.storage.from('post-media').upload(safeName,file,{contentType:file.type||undefined,cacheControl:'31536000',upsert:false});
-  if(error) throw error;
-  const {data}=sb.storage.from('post-media').getPublicUrl(safeName);
-  return {type:file.type?.startsWith('image/')?'image':file.type?.startsWith('video/')?'video':file.type?.startsWith('audio/')?'audio':'file',src:data.publicUrl,path:safeName,name:file.name||safeName};
-}
-function setChatAttachment(file){
-  if(!file) return;
-  const allowed=file.type?.startsWith('image/')||file.type?.startsWith('video/')||file.type?.startsWith('audio/');
-  if(!allowed){$('messageSendStatus').textContent='Please choose an image, video, or audio file.';$('messageSendStatus').style.display='inline';return;}
-  window.__chatAttachment=file;
-  const preview=$('chatAttachmentPreview');
-  if(preview){
-    const url=URL.createObjectURL(file);
-    const kind=file.type.startsWith('image/')?'🖼️':file.type.startsWith('video/')?'🎥':'🎵';
-    preview.innerHTML=`<span>${kind} ${esc(file.name||'Pasted file')}</span><button type="button" class="secondary" style="padding:3px 7px" onclick="clearChatAttachment()">✕</button>`;
-    preview.dataset.url=url;
-  }
-}
-function clearChatAttachment(){
-  const preview=$('chatAttachmentPreview');
-  if(preview?.dataset.url) URL.revokeObjectURL(preview.dataset.url);
-  window.__chatAttachment=null;
-  if(preview) preview.innerHTML='';
-  const fi=$('chatFileInput');if(fi)fi.value='';
-}
-function handleChatPaste(e){
-  const items=[...(e.clipboardData?.items||[])];
-  const fileItem=items.find(i=>i.kind==='file' && /^(image|video|audio)\//i.test(i.type||''));
-  if(fileItem){
-    const file=fileItem.getAsFile();
-    if(file){
-      e.preventDefault();
-      setChatAttachment(file);
-      const status=$('messageSendStatus');
-      if(status){status.style.display='inline';status.style.color='var(--good)';status.textContent='Pasted attachment ready — press Send.';}
-      return;
-    }
-  }
-}
-
-async function openChat(uid,name){
-  ensureMessageComposer();
-  activeChat={id:String(uid),name};
-  $('chatHeader').innerHTML='💬 '+esc(name)+' <span class="muted" style="font-size:11px;font-weight:400">— conversation</span>';
-  const input=$('messageInput');if(input)input.placeholder='Type a message or paste an image…';
-  const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';
-  if(!sb)return;
-  try{
-    await loadActiveChatMessages();
-  }catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}
-  ensureMessageComposer();
-}
-function ensureMessageComposer(){
-  const form=$('messageComposer'), input=$('messageInput'), attachBtn=$('chatAttachBtn'), fileInput=$('chatFileInput'), sendBtn=$('sendMessageBtn'), voiceBtn=$('chatVoiceBtn');
-  if(!form || !input || !attachBtn || !fileInput || !sendBtn) return;
-  if(form.dataset.ready==='1') return;
-  form.dataset.ready='1';
-
-  attachBtn.onclick=()=>fileInput.click();
-  fileInput.onchange=e=>{ const f=e.target.files?.[0]; if(f) setChatAttachment(f); };
-  input.addEventListener('paste', handleChatPaste);
-  input.addEventListener('keydown', e=>{
-    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
-  });
-  sendBtn.onclick=sendChatMessage;
-  if(voiceBtn) voiceBtn.onclick=toggleChatVoiceRecording;
-}
-
-async function toggleChatVoiceRecording(){
-  const btn=$('chatVoiceBtn'), status=$('messageSendStatus');
-  if(chatRecorder && chatRecorder.state==='recording'){
-    chatRecorder.stop();
-    if(status){status.style.display='inline';status.style.color='var(--muted)';status.textContent='Finishing voice recording…';}
-    return;
-  }
-  if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder){
-    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Voice recording is not supported by this browser.';}
-    return;
-  }
-  if(!activeChat){
-    if(status){status.style.display='inline';status.style.color='var(--muted)';status.textContent='Select a person first.';}
-    return;
-  }
-  try{
-    chatRecordingStream=await navigator.mediaDevices.getUserMedia({audio:true});
-    const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'');
-    chatRecordChunks=[];
-    chatRecorder=new MediaRecorder(chatRecordingStream,mime?{mimeType:mime}:undefined);
-    chatRecorder.ondataavailable=e=>{if(e.data?.size)chatRecordChunks.push(e.data)};
-    chatRecorder.onstop=()=>{
-      const type=chatRecorder?.mimeType||'audio/webm';
-      const blob=new Blob(chatRecordChunks,{type});
-      const ext=type.includes('ogg')?'ogg':'webm';
-      setChatAttachment(new File([blob],`voice_${Date.now()}.${ext}`,{type}));
-      chatRecordingStream?.getTracks().forEach(t=>t.stop());
-      chatRecordingStream=null;
-      chatRecorder=null;
-      chatRecordChunks=[];
-      if(btn){btn.classList.remove('chat-recording');btn.textContent='🎙️';btn.title='Record voice';}
-      if(status){status.style.display='inline';status.style.color='var(--good)';status.textContent='Voice ready — press Send.';}
-    };
-    chatRecorder.start();
-    if(btn){btn.classList.add('chat-recording');btn.textContent='⏹️';btn.title='Stop recording';}
-    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Recording voice… press ⏹️ when finished.';}
-  }catch(err){
-    chatRecordingStream?.getTracks().forEach(t=>t.stop());
-    chatRecordingStream=null;
-    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Microphone permission/error: '+(err?.message||'Unable to record');}
-  }
-}
-
-async function sendChatMessage(){
-  const input=$('messageInput'), status=$('messageSendStatus'), sendBtn=$('sendMessageBtn');
-  if(!input || !status || !sendBtn) return;
-  if(!activeChat){
-    status.style.display='inline'; status.style.color='var(--muted)'; status.textContent='Select a person first.';
-    return;
-  }
-  if(!sb || !user){
-    status.style.display='inline'; status.style.color='var(--danger)'; status.textContent='Chat is not connected to Supabase.';
-    return;
-  }
-  const text=input.value; const cleanText=text.trim(); const file=window.__chatAttachment;
-  if(!cleanText && !file){
-    status.style.display='inline'; status.style.color='var(--muted)'; status.textContent='Type a message or paste/attach a file first.';
-    input.focus(); return;
-  }
-  if(sendBtn.dataset.sending==='1') return;
-  sendBtn.dataset.sending='1'; sendBtn.disabled=true;
-  status.style.display='inline'; status.style.color='var(--muted)'; status.textContent=file?'Uploading attachment…':'Sending…';
-  try{
-    let media=null;
-    if(file) media=await uploadChatFile(file);
-    const payload={kind:media&&cleanText?'mixed':media?'media':'text',text:cleanText,media:media||null};
-    const {data,error}=await sb.from('messages').insert({
-      sender_id:user.id,
-      recipient_id:activeChat.id,
-      content:JSON.stringify(payload)
-    }).select('id,sender_id,recipient_id,content,created_at').single();
-    if(error) throw error;
-    const msgBox=$('chatMessagesList');
-    if(data && msgBox){
-      msgBox.querySelector('.empty')?.remove();
-      if(!msgBox.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)){
-        msgBox.insertAdjacentHTML('beforeend',messageBubble(data));
-      }
-      msgBox.scrollTop=msgBox.scrollHeight;
-    }
-    input.value=''; clearChatAttachment();
-    status.style.display='inline'; status.style.color='var(--good)'; status.textContent='Sent ✓';
-    window.setTimeout(()=>{ if(status) status.style.display='none'; },1200);
-    input.focus();
-  }catch(err){
-    console.error('Message send failed:',err);
-    status.style.display='inline'; status.style.color='var(--danger)';
-    status.textContent='Failed: '+(err?.message || err?.details || 'Unable to send');
-  }finally{
-    sendBtn.dataset.sending='0'; sendBtn.disabled=false;
-  }
-}
-
-function handleIncomingMessage(m){
-  if(!m||!activeChat)return;
-  const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);
-  if(String(otherId)!==String(activeChat.id))return;
-  const c=parseMessageContent(m.content);
-  if(c.kind==='reaction'){
-    loadActiveChatMessages().catch(()=>{});
-    return;
-  }
-  const box=$('chatMessagesList');
-  if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){
-    const empty=box.querySelector('.empty');if(empty)empty.remove();
-    box.insertAdjacentHTML('beforeend',messageBubble(m,{}));box.scrollTop=box.scrollHeight;
-  }
-}
-
-function renderSinglePost(p){
- const name=p.user_name||'Pixel Friend',date=p.created_at?new Date(p.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}):'Just now',m=normalizeMedia(p.media);let media='';if(m?.src){const path=m.path?esc(m.path):'';if(m.type==='image')media=`<div class="post-media"><img src="${esc(m.src)}" loading="lazy" decoding="async"></div>`;else if(m.type==='video')media=`<div class="post-media"><video src="${esc(m.src)}" data-media="1" data-media-type="video" data-media-path="${path}" controls preload="none" playsinline></video></div>`;else if(m.type==='audio')media=`<div class="post-media"><audio src="${esc(m.src)}" data-media="1" data-media-type="audio" data-media-path="${path}" controls preload="none"></audio></div>`}const liked=(p.likes_users||[]).includes(user?.id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="post-head"><div class="avatar">${esc(name.slice(0,2).toUpperCase())}</div><div><b>${esc(name)}</b><div class="muted">${esc(date)}</div></div></div>${p.text?`<div class="post-body">${esc(p.text)}</div>`:''}${media}<div class="post-actions"><button class="post-action-btn ${liked?'liked':''}" data-action="like" data-post-id="${esc(p.id)}" onclick="handleLike('${esc(p.id)}')">❤️ <span data-like-count>${p.likes_count||0}</span> Likes</button></div><div class="comments-box"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Comments (<span data-comment-count>${(p.comments||[]).length}</span>)</div><div data-comments style="display:grid;gap:5px;margin-bottom:8px">${(p.comments||[]).map(commentHtml).join('')}</div><form onsubmit="handleAddComment('${esc(p.id)}',event)" style="display:flex;gap:5px"><input type="text" id="comment-input-${esc(p.id)}" placeholder="Write a comment..." required style="background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:12px;flex:1;outline:none"><button type="submit" class="secondary" style="padding:6px 12px;font-size:12px">Send</button></form></div></article>`}
-
-initSupabase();
-buildNav();
-ensureMessageComposer();
-
-if (sb) {
-  sb.auth.getSession().then(({ data: { session } }) => {
-    if (session && session.user) {
-      user = session.user;
-      openApp();
-    }
-  });
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-      user = null; posts = []; clearInterval(window.__pfFeedPoll);
-      if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel=null; }
-      if (presenceChannel) { sb.removeChannel(presenceChannel); presenceChannel=null; }
-      renderOnlineFriends();
-    }
-  });
-}
 </script>
 </body>
 </html>

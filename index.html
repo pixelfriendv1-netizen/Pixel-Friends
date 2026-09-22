@@ -267,6 +267,10 @@ function closeMenu(){
 function showPage(id){
  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+ if(id==='messages'){
+   setupMessages();
+   ensureMessageComposer();
+ }
 }
 
 function displayName(){
@@ -341,6 +345,7 @@ async function startPresence(force=false){
       });
       setPresenceStatus('ONLINE',true);
       renderOnlineFriends();
+      setupMessages();
       return;
     }catch(_){ /* recreate below */ }
   }
@@ -358,9 +363,10 @@ async function startPresence(force=false){
     .on('presence',{event:'sync'},()=>{
       setPresenceStatus('ONLINE',true);
       renderOnlineFriends();
+      setupMessages();
     })
-    .on('presence',{event:'join'},()=>renderOnlineFriends())
-    .on('presence',{event:'leave'},()=>renderOnlineFriends())
+    .on('presence',{event:'join'},()=>{renderOnlineFriends();setupMessages();})
+    .on('presence',{event:'leave'},()=>{renderOnlineFriends();setupMessages();})
     .subscribe(async status=>{
       if(status==='SUBSCRIBED'){
         try{
@@ -957,13 +963,26 @@ function renderFeed(){
 
 function setupMessages(){
  const list=$('chatUsersList');if(!list||!sb||!user)return;
- const people=new Map();posts.forEach(p=>{if(p.user_id&&p.user_id!==user.id&&!people.has(p.user_id))people.set(p.user_id,p.user_name||'Pixel Friend')});
- list.innerHTML=people.size?[...people].slice(0,20).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px">${esc(name)}</button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet.</div>';
+ const people=new Map();
+ // Users who are currently online are always available to start a chat.
+ const state=presenceChannel?.presenceState?.() || {};
+ Object.entries(state).forEach(([key,entries])=>{
+   (entries||[]).forEach(entry=>{
+     const id=String(entry?.user_id||key);
+     if(id && id!==String(user.id) && !people.has(id)) people.set(id,entry.display_name||entry.user_name||'Pixel Friend');
+   });
+ });
+ // Also include users we know from the feed, so Messages can be started even if they are offline.
+ (posts||[]).forEach(p=>{
+   if(p.user_id && p.user_id!==user.id && !people.has(String(p.user_id))) people.set(String(p.user_id),p.user_name||'Pixel Friend');
+ });
+ const arr=[...people.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+ list.innerHTML=arr.length?arr.slice(0,50).map(([id,name])=>`<button class="secondary" data-chat-user="${esc(id)}" data-chat-name="${esc(name)}" style="width:100%;text-align:left;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between"><span>💬 ${esc(name)}</span><span class="muted" style="font-size:10px">Start chat</span></button>`).join(''):'<div class="empty" style="padding:15px;font-size:12px">No users available yet. Ask a friend to log in or publish a post.</div>';
  list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
 }
 let activeChat=null;
 function messageBubble(m){return `<div data-message-id="${esc(m.id)}" style="align-self:${m.sender_id===user?.id?'flex-end':'flex-start'};max-width:80%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:${m.sender_id===user?.id?'#0a1d28':'#08131c'}"><div>${esc(m.content)}</div><div class="muted" style="font-size:10px;margin-top:3px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`}
-async function openChat(uid,name){activeChat={id:uid,name};$('chatHeader').textContent=name;const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Messages require the included Supabase setup SQL.</div>'}ensureMessageComposer()}
+async function openChat(uid,name){activeChat={id:uid,name};$('chatHeader').textContent=name;const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';if(!sb)return;try{const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);if(error)throw error;box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet.</div>';box.scrollTop=box.scrollHeight}catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}ensureMessageComposer()}
 function ensureMessageComposer(){if($('messageComposer'))return;const box=$('.chat-box');if(!box)return;const form=document.createElement('form');form.id='messageComposer';form.style.cssText='display:flex;gap:6px;margin-top:8px';form.innerHTML='<input id="messageInput" required placeholder="Write a message..." style="flex:1;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:9px;outline:none"><button class="secondary" type="submit">Send</button>';box.appendChild(form);form.onsubmit=async e=>{e.preventDefault();if(!activeChat||!sb)return;const input=$('messageInput'),text=input.value.trim();if(!text)return;try{const {error}=await sb.from('messages').insert([{sender_id:user.id,recipient_id:activeChat.id,content:text}]);if(error)throw error;input.value=''}catch(err){alert('Message failed: '+err.message)}}}
 function handleIncomingMessage(m){if(activeChat?.id===m.sender_id){const box=$('chatMessagesList');if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight}}}
 

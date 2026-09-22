@@ -91,7 +91,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .chat-container{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:450px}
 .chat-users{border-right:1px solid var(--line);padding-right:14px;overflow-y:auto;max-height:500px}
 .chat-box{display:flex;flex-direction:column;height:500px}
-.chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;background:#03080d;border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+.chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;background:#03080d;border:1px solid var(--line);border-radius:8px;margin-bottom:10px}\n.chat-composer-tools{display:flex;gap:6px;align-items:center}\n.chat-tool{width:42px;height:42px;display:grid;place-items:center;padding:0!important}\n.chat-recording{color:var(--danger)!important;border-color:var(--danger)!important;animation:chatPulse 1s infinite}\n.chat-reactions{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}\n.chat-reaction-btn{border:1px solid var(--line);background:#07131c;color:var(--text);border-radius:999px;padding:2px 6px;font-size:13px;cursor:pointer}\n.chat-reaction-list{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}\n.chat-reaction-chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;background:#07131c}\n@keyframes chatPulse{50%{opacity:.45}}
 
 .drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:25;backdrop-filter:blur(3px)}
 .drawer-backdrop.active{display:block}
@@ -195,7 +195,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
   </div>
 </section>
 
-<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div><div class="chat-messages" id="chatMessagesList"><div class="empty">Select a user, then type a message or paste an image with Ctrl+V.</div></div><form id="messageComposer" style="margin-top:8px;display:grid;gap:6px"><div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div style="display:flex;gap:6px;align-items:flex-end"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Select a friend, then type or paste…" style="flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none"></textarea><div style="display:grid;gap:5px"><button type="button" class="secondary" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px" type="button" id="sendMessageBtn">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span></form></div></div></div></section>
+<section class="page" id="messages"><h2 class="page-title">Messages</h2><p class="page-sub">Direct conversations.</p><div class="card"><div class="chat-container"><div class="chat-users" id="chatUsersList"><div class="empty" style="padding:15px;font-size:12px;">Loading users...</div></div><div class="chat-box"><div id="chatHeader" style="padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;font-weight:bold;color:var(--cyan)">Select a user to start chatting</div><div class="chat-messages" id="chatMessagesList"><div class="empty">Select a user, then type a message or paste an image with Ctrl+V.</div></div><form id="messageComposer" style="margin-top:8px;display:grid;gap:6px"><div id="chatAttachmentPreview" style="min-height:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--cyan);font-size:12px"></div><div style="display:flex;gap:6px;align-items:flex-end"><textarea id="messageInput" rows="2" autocomplete="off" placeholder="Type a message or paste an image…" style="flex:1;resize:vertical;min-height:44px;max-height:140px;background:#03080d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;outline:none"></textarea><div class="chat-composer-tools"><button type="button" class="secondary chat-tool" id="chatVoiceBtn" title="Record voice">🎙️</button><button type="button" class="secondary chat-tool" id="chatAttachBtn" title="Choose image, video or audio">📎</button><button class="primary" style="width:auto;margin:0;padding:10px 16px;height:42px" type="button" id="sendMessageBtn">Send</button></div></div><input id="chatFileInput" type="file" accept="image/*,video/*,audio/*" class="hidden"><span id="messageSendStatus" class="muted" style="display:none;font-size:11px"></span></form></div></div></div></section>
 <section class="page" id="notifications"><h2 class="page-title">Notifications</h2><p class="page-sub">Likes and comments on your posts.</p><div class="card"><div class="list" id="notificationList"><div class="empty">You're all caught up.</div></div></div></section>
 <section class="page" id="profile"><h2 class="page-title">Profile</h2><p class="page-sub">Identity.</p><div class="card"><div class="row"><div class="avatar" id="profileAvatar">PF</div><div><h3 id="profileName">Guest</h3><span class="muted" id="profileEmail"></span></div></div></div></section>
 <section class="page" id="settings"><h2 class="page-title">Settings</h2><p class="page-sub">Preferences.</p><div class="card"><div class="stat" style="display:flex;justify-content:space-between;padding:10px 0;"><span>Theme</span><b>Cyber</b></div></div></section>
@@ -979,6 +979,9 @@ function setupMessages(){
  list.querySelectorAll('[data-chat-user]').forEach(b=>b.onclick=()=>openChat(b.dataset.chatUser,b.dataset.chatName));
 }
 let activeChat=null;
+let chatRecorder=null;
+let chatRecordChunks=[];
+let chatRecordingStream=null;
 function parseMessageContent(content){
   if(!content) return {kind:'text',text:''};
   try{
@@ -987,9 +990,10 @@ function parseMessageContent(content){
   }catch(e){}
   return {kind:'text',text:String(content)};
 }
-function messageBubble(m){
+function messageBubble(m, reactionMap){
   const mine=String(m.sender_id)===String(user?.id);
   const c=parseMessageContent(m.content);
+  if(c.kind==='reaction') return '';
   let body='';
   if(c.text) body+=`<div style="white-space:pre-wrap;word-break:break-word">${esc(c.text)}</div>`;
   if(c.media?.src){
@@ -999,8 +1003,42 @@ function messageBubble(m){
     else if(type==='audio') body+=`<div style="margin-top:${c.text?'8px':'0'}"><audio src="${src}" controls preload="metadata" style="width:min(420px,100%);display:block"></audio></div>`;
     else body+=`<a href="${src}" target="_blank" rel="noopener" style="color:var(--cyan)">📎 Open attachment</a>`;
   }
-  return `<div data-message-id="${esc(m.id)}" style="align-self:${mine?'flex-end':'flex-start'};max-width:82%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:${mine?'#0a1d28':'#08131c'}"><div>${body||'<span class="muted">Attachment</span>'}</div><div class="muted" style="font-size:10px;margin-top:4px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`;
+  const reactions=(reactionMap&&reactionMap[m.id])||[];
+  const reactionHtml=reactions.length?`<div class="chat-reaction-list">${reactions.map(r=>`<span class="chat-reaction-chip">${esc(r.emoji)} ${esc(r.name||'')}</span>`).join('')}</div>`:'';
+  const quick=['❤️','👍','😂','😮','😢','🔥'];
+  const quickHtml=`<div class="chat-reactions">${quick.map(e=>`<button type="button" class="chat-reaction-btn" onclick="reactToMessage('${esc(m.id)}','${e}')">${e}</button>`).join('')}</div>`;
+  return `<div data-message-id="${esc(m.id)}" style="align-self:${mine?'flex-end':'flex-start'};max-width:82%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:${mine?'#0a1d28':'#08131c'}"><div>${body||'<span class="muted">Attachment</span>'}</div>${reactionHtml}${quickHtml}<div class="muted" style="font-size:10px;margin-top:4px">${esc(new Date(m.created_at).toLocaleString([], {dateStyle:'short',timeStyle:'short'}))}</div></div>`;
 }
+async function loadActiveChatMessages(){
+  if(!activeChat||!sb||!user)return;
+  const box=$('chatMessagesList'); if(!box)return;
+  const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);
+  if(error) throw error;
+  const rows=data||[];
+  const reactionMap={};
+  rows.forEach(m=>{
+    const c=parseMessageContent(m.content);
+    if(c.kind==='reaction' && c.target_id){
+      (reactionMap[c.target_id] ||= []).push({emoji:c.emoji||'❤️',name:c.name||((String(m.sender_id)===String(user.id))?'You':'')});
+    }
+  });
+  const normal=rows.filter(m=>parseMessageContent(m.content).kind!=='reaction');
+  box.innerHTML=normal.map(m=>messageBubble(m,reactionMap)).join('')||'<div class="empty">No messages yet. Send a message below.</div>';
+  box.scrollTop=box.scrollHeight;
+}
+async function reactToMessage(messageId, emoji){
+  if(!activeChat||!sb||!user)return;
+  try{
+    const payload={kind:'reaction',target_id:String(messageId),emoji:String(emoji),name:displayName()};
+    const {error}=await sb.from('messages').insert({sender_id:user.id,recipient_id:activeChat.id,content:JSON.stringify(payload)});
+    if(error)throw error;
+    await loadActiveChatMessages();
+  }catch(err){
+    const status=$('messageSendStatus');
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Reaction failed: '+(err?.message||'Unable to react');}
+  }
+}
+
 async function uploadChatFile(file){
   if(!file || !sb) return null;
   const ext=(file.name||'attachment').split('.').pop() || (file.type.split('/')[1]||'bin');
@@ -1053,15 +1091,12 @@ async function openChat(uid,name){
   const box=$('chatMessagesList');box.innerHTML='<div class="empty">Loading messages…</div>';
   if(!sb)return;
   try{
-    const {data,error}=await sb.from('messages').select('id,sender_id,recipient_id,content,created_at').or(`and(sender_id.eq.${user.id},recipient_id.eq.${uid}),and(sender_id.eq.${uid},recipient_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(100);
-    if(error)throw error;
-    box.innerHTML=(data||[]).map(messageBubble).join('')||'<div class="empty">No messages yet. Send a message below.</div>';
-    box.scrollTop=box.scrollHeight;
+    await loadActiveChatMessages();
   }catch(e){box.innerHTML='<div class="empty">Unable to load messages: '+esc(e?.message||'Unknown error')+'</div>'}
   ensureMessageComposer();
 }
 function ensureMessageComposer(){
-  const form=$('messageComposer'), input=$('messageInput'), attachBtn=$('chatAttachBtn'), fileInput=$('chatFileInput'), sendBtn=$('sendMessageBtn');
+  const form=$('messageComposer'), input=$('messageInput'), attachBtn=$('chatAttachBtn'), fileInput=$('chatFileInput'), sendBtn=$('sendMessageBtn'), voiceBtn=$('chatVoiceBtn');
   if(!form || !input || !attachBtn || !fileInput || !sendBtn) return;
   if(form.dataset.ready==='1') return;
   form.dataset.ready='1';
@@ -1073,6 +1108,50 @@ function ensureMessageComposer(){
     if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
   });
   sendBtn.onclick=sendChatMessage;
+  if(voiceBtn) voiceBtn.onclick=toggleChatVoiceRecording;
+}
+
+async function toggleChatVoiceRecording(){
+  const btn=$('chatVoiceBtn'), status=$('messageSendStatus');
+  if(chatRecorder && chatRecorder.state==='recording'){
+    chatRecorder.stop();
+    if(status){status.style.display='inline';status.style.color='var(--muted)';status.textContent='Finishing voice recording…';}
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder){
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Voice recording is not supported by this browser.';}
+    return;
+  }
+  if(!activeChat){
+    if(status){status.style.display='inline';status.style.color='var(--muted)';status.textContent='Select a person first.';}
+    return;
+  }
+  try{
+    chatRecordingStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'');
+    chatRecordChunks=[];
+    chatRecorder=new MediaRecorder(chatRecordingStream,mime?{mimeType:mime}:undefined);
+    chatRecorder.ondataavailable=e=>{if(e.data?.size)chatRecordChunks.push(e.data)};
+    chatRecorder.onstop=()=>{
+      const type=chatRecorder?.mimeType||'audio/webm';
+      const blob=new Blob(chatRecordChunks,{type});
+      const ext=type.includes('ogg')?'ogg':'webm';
+      setChatAttachment(new File([blob],`voice_${Date.now()}.${ext}`,{type}));
+      chatRecordingStream?.getTracks().forEach(t=>t.stop());
+      chatRecordingStream=null;
+      chatRecorder=null;
+      chatRecordChunks=[];
+      if(btn){btn.classList.remove('chat-recording');btn.textContent='🎙️';btn.title='Record voice';}
+      if(status){status.style.display='inline';status.style.color='var(--good)';status.textContent='Voice ready — press Send.';}
+    };
+    chatRecorder.start();
+    if(btn){btn.classList.add('chat-recording');btn.textContent='⏹️';btn.title='Stop recording';}
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Recording voice… press ⏹️ when finished.';}
+  }catch(err){
+    chatRecordingStream?.getTracks().forEach(t=>t.stop());
+    chatRecordingStream=null;
+    if(status){status.style.display='inline';status.style.color='var(--danger)';status.textContent='Microphone permission/error: '+(err?.message||'Unable to record');}
+  }
 }
 
 async function sendChatMessage(){
@@ -1129,8 +1208,16 @@ function handleIncomingMessage(m){
   if(!m||!activeChat)return;
   const otherId=String(m.sender_id)===String(user?.id)?String(m.recipient_id):String(m.sender_id);
   if(String(otherId)!==String(activeChat.id))return;
+  const c=parseMessageContent(m.content);
+  if(c.kind==='reaction'){
+    loadActiveChatMessages().catch(()=>{});
+    return;
+  }
   const box=$('chatMessagesList');
-  if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){const empty=box.querySelector('.empty');if(empty)empty.remove();box.insertAdjacentHTML('beforeend',messageBubble(m));box.scrollTop=box.scrollHeight;}
+  if(!box.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)){
+    const empty=box.querySelector('.empty');if(empty)empty.remove();
+    box.insertAdjacentHTML('beforeend',messageBubble(m,{}));box.scrollTop=box.scrollHeight;
+  }
 }
 
 function renderSinglePost(p){

@@ -362,6 +362,7 @@ $("drawerBackdrop").onclick=closeMenu;
 
 async function setMediaFile(file) {
   if (!file) return;
+  console.log("File selected for upload:", file.name, file.type);
   
   let type = 'image';
   if (file.type.startsWith('video/')) type = 'video';
@@ -370,13 +371,17 @@ async function setMediaFile(file) {
   if (mode === "cloud" && sb) {
     $("uploadStatus").textContent = "Uploading media file to cloud storage...";
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    
+    console.log("Starting Supabase upload to bucket 'post-media' with filename:", fileName);
     const { data, error } = await sb.storage.from('post-media').upload(fileName, file);
     
     if (error) {
+      console.error("Supabase Storage Upload Error:", error);
       $("uploadStatus").textContent = "Upload failed: " + error.message;
       return;
     }
 
+    console.log("Upload successful, fetching public URL...", data);
     const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(fileName);
     currentMedia = { type, src: publicUrlData.publicUrl };
     $("uploadStatus").textContent = "Upload complete!";

@@ -617,6 +617,7 @@ $("postBtn").onclick = async () => {
     if(tempEl) tempEl.outerHTML=renderSinglePost(saved); else renderFeed();
     attachMediaRecovery();
     saveFeedCache();
+    window.setTimeout(()=>loadPosts(true),1200);
   } catch (err) {
     posts = posts.filter(p => p.id !== tempId);
     renderFeed();
@@ -843,7 +844,7 @@ function subscribeToFeed(){
 function startFeedUpdates(){
   subscribeToFeed();
   clearInterval(window.__pfFeedPoll);
-  window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},30000);
+  window.__pfFeedPoll=setInterval(()=>{if(!window.__pfRealtimeReady)loadPosts(true)},8000);
 }
 
 function commentHtml(c){

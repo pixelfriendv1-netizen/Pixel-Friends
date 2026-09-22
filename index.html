@@ -370,14 +370,14 @@ async function setMediaFile(file) {
   if (mode === "cloud" && sb) {
     $("uploadStatus").textContent = "Uploading media file to cloud storage...";
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-    const { data, error } = await sb.storage.from('media').upload(fileName, file);
+    const { data, error } = await sb.storage.from('post-media').upload(fileName, file);
     
     if (error) {
       $("uploadStatus").textContent = "Upload failed: " + error.message;
       return;
     }
 
-    const { data: publicUrlData } = sb.storage.from('media').getPublicUrl(fileName);
+    const { data: publicUrlData } = sb.storage.from('post-media').getPublicUrl(fileName);
     currentMedia = { type, src: publicUrlData.publicUrl };
     $("uploadStatus").textContent = "Upload complete!";
     renderMediaPreview();

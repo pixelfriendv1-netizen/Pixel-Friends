@@ -127,7 +127,6 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
       <button class="primary" id="authSubmit">ENTER PIXEL FRIENDS</button>
     </form>
     <div class="status" id="authStatus"></div>
-    <button class="secondary" id="demoBtn" style="width:100%;margin-top:12px">CONTINUE IN DEMO MODE</button>
   </div>
 </section>
 
@@ -301,13 +300,13 @@ function showPage(id){
 }
 
 function displayName(){
- return user?.user_metadata?.display_name || user?.email?.split("@")[0] || localStorage.getItem("pf_demo_name") || "Pixel Friend";
+ return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Pixel Friend";
 }
 
 function openApp(){
  $("auth").classList.add("hidden");$("app").style.display="block";$("sideName").textContent=displayName();
  $("welcome").textContent=`Welcome, ${displayName()}.`;
- $("profileName").textContent=displayName();$("profileEmail").textContent=user?.email||"Demo account";
+ $("profileName").textContent=displayName();$("profileEmail").textContent=user?.email||"";
  $("profileAvatar").textContent=displayName().slice(0,2).toUpperCase();$("topAvatar").textContent=displayName().slice(0,2).toUpperCase();
  
  loadPosts();
@@ -330,7 +329,7 @@ function syncAuthMode(){$("loginTab").classList.toggle("active",!register);$("re
 $("authForm").onsubmit=async e=>{
  e.preventDefault();setStatus("Connecting…",false);
  const email=$("email").value.trim(),password=$("password").value,display=$("displayName").value.trim();
- if(!sb){setStatus("Cloud authentication is unavailable. Use Demo Mode.");return}
+ if(!sb){setStatus("Cloud authentication is unavailable.");return}
  try{
   if(register){
    const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:display||email.split("@")[0]}}});
@@ -341,8 +340,6 @@ $("authForm").onsubmit=async e=>{
   }
  }catch(err){setStatus(err?.message||"Authentication failed.")}
 };
-
-$("demoBtn").onclick=()=>{mode="demo";user={id:"demo-"+Date.now(),email:"demo@pixelfriends.local",user_metadata:{display_name:"Pixel Friend"}};localStorage.setItem("pf_demo_name","Pixel Friend");openApp()};
 
 $("logout").onclick=async()=>{
   if(mode==="cloud"&&sb)try{await sb.auth.signOut()}catch(e){}
@@ -393,14 +390,6 @@ async function setMediaFile(file) {
     currentMedia = { type, src: publicUrlData.publicUrl };
     $("uploadStatus").textContent = "Upload complete!";
     renderMediaPreview();
-  } else {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      currentMedia = { type, src: e.target.result };
-      $("uploadStatus").textContent = "Demo file loaded.";
-      renderMediaPreview();
-    };
-    reader.readAsDataURL(file);
   }
 }
 
@@ -445,11 +434,7 @@ $("postBtn").onclick = async () => {
     const { error } = await sb.from('posts').insert([newPost]);
     if (error) { alert("Failed to create post: " + error.message); return; }
     
-    // Instant feed update without waiting for real-time lag
     await loadPosts();
-  } else {
-    posts.unshift({ ...newPost, id: 'local-' + Date.now(), created_at: new Date().toISOString(), likes: [], comments: [] });
-    renderFeed();
   }
   $("postText").value = "";
   currentMedia = null;
@@ -469,8 +454,6 @@ async function loadPosts() {
       }));
       renderFeed(); 
     }
-  } else {
-    renderFeed();
   }
 }
 
@@ -478,10 +461,7 @@ async function loadOnlineFriends() {
   const container = document.querySelector('.grid > div:nth-child(2) .list');
   if (!container) return;
 
-  if (mode !== "cloud" || !sb) {
-    container.innerHTML = '<div class="empty" style="font-size:12px;padding:10px;">Demo mode: No live tracking.</div>';
-    return;
-  }
+  if (mode !== "cloud" || !sb) return;
 
   const { data, error } = await sb
     .from('posts')
@@ -554,15 +534,6 @@ async function handleLike(postId) {
       await sb.from('likes').insert([{ post_id: postId, user_id: user.id }]);
     }
     loadPosts();
-  } else {
-    if (hasLiked) {
-      post.likes_users = likesUsers.filter(id => id !== user.id);
-      post.likes_count = Math.max(0, (post.likes_count || 1) - 1);
-    } else {
-      post.likes_users.push(user.id);
-      post.likes_count = (post.likes_count || 0) + 1;
-    }
-    renderFeed();
   }
 }
 
@@ -571,8 +542,6 @@ async function handleAddComment(postId, event) {
   const input = $(`comment-input-${postId}`);
   const text = input.value.trim();
   if (!text) return;
-
-  const post = posts.find(p => p.id === postId);
 
   if (mode === "cloud" && sb) {
     const { error } = await sb.from('comments').insert([{
@@ -589,12 +558,6 @@ async function handleAddComment(postId, event) {
 
     input.value = '';
     loadPosts();
-  } else {
-    const newComment = { user_name: displayName(), content: text, created_at: new Date().toISOString() };
-    if (!post.comments) post.comments = [];
-    post.comments.push(newComment);
-    input.value = '';
-    renderFeed();
   }
 }
 
@@ -723,9 +686,19 @@ function subscribeToNotifications() {
   }
 }
 
-// Initializers
+// Initializers & Session Recovery on F5 Refresh
 initSupabase();
 buildNav();
+
+if (sb) {
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user) {
+      user = session.user;
+      mode = "cloud";
+      openApp();
+    }
+  });
+}
 </script>
 </body>
 </html>
